@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "vision-ai/frontend/out",
+    "public": "frontend/out",
     "ignore": [
       "firebase.json",
       "**/.*",
