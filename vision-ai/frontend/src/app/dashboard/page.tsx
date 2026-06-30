@@ -45,6 +45,7 @@ export default function DashboardPage() {
   const [myResolved, setMyResolved] = useState<number>(0);
   const [myPending, setMyPending] = useState<number>(0);
   const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
+  const [totalReports, setTotalReports] = useState<number>(0);
 
   useEffect(() => {
     if (!user) return;
@@ -52,8 +53,9 @@ export default function DashboardPage() {
       setMyReports(reports.length);
       setMyResolved(reports.filter((r) => r.status === "resolved").length);
       setMyPending(reports.filter((r) => r.status !== "resolved").length);
-    }).catch(() => {});
+    }).catch((e) => console.error("getUserReports failed:", e));
     getAllReports().then((all) => {
+      setTotalReports(all.length);
       const sorted = all.slice(0, 5).map((r) => ({
         id: r.id || "",
         title: r.title || r.description?.slice(0, 40) || "Untitled",
@@ -61,14 +63,14 @@ export default function DashboardPage() {
         time: r.created_at ? timeAgo(r.created_at) : "just now",
       }));
       setRecentReports(sorted);
-    }).catch(() => {});
+    }).catch((e) => console.error("getAllReports failed:", e));
   }, [user]);
 
   const stats = [
     { title: "My Reports", value: String(myReports), icon: AlertTriangle, change: "Total submitted" },
     { title: "Resolved", value: String(myResolved), icon: CheckCircle, change: myReports ? `${Math.round((myResolved / myReports) * 100)}% rate` : "0% rate" },
     { title: "Pending", value: String(myPending), icon: Clock, change: "Awaiting resolution" },
-    { title: "Community Total", value: String(recentReports.length), icon: TrendingUp, change: "All reports" },
+    { title: "Community Total", value: String(totalReports), icon: TrendingUp, change: "All reports" },
   ];
 
   const quickActions = [
