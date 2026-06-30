@@ -5,14 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Camera, MapPin, Loader2, CheckCircle, AlertTriangle, Upload } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Camera, MapPin, Loader2, CheckCircle, AlertTriangle, Upload, Navigation } from "lucide-react";
 import { useAuth } from "@/lib/firebase-context";
 import { useRouter } from "next/navigation";
 import { createReport } from "@/lib/firestore";
 import { analyzeReport, type AnalyzeResponse } from "@/lib/api";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, increment } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, updateDoc, increment } from "firebase/firestore";
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
@@ -47,6 +48,9 @@ export default function ReportPage() {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [address, setAddress] = useState("");
+  const [manualLat, setManualLat] = useState("");
+  const [manualLng, setManualLng] = useState("");
+  const [useManual, setUseManual] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState<AIResult | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
@@ -72,12 +76,25 @@ export default function ReportPage() {
         (pos) => {
           setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
           setAddress(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+          setUseManual(false);
         },
         () => {
           setLocation({ lat: 28.6139, lng: 77.209 });
           setAddress("New Delhi, India (default)");
         }
       );
+    }
+  };
+
+  const handleManualLocation = () => {
+    const lat = parseFloat(manualLat);
+    const lng = parseFloat(manualLng);
+    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      setLocation({ lat, lng });
+      setAddress(`Lat: ${lat}, Lng: ${lng} (manual)`);
+      setUseManual(true);
+    } else {
+      setError("Invalid coordinates. Latitude must be -90 to 90, longitude -180 to 180.");
     }
   };
 
@@ -174,21 +191,6 @@ export default function ReportPage() {
 
       await updateDoc(doc(db, "users", user.uid), { reports_count: increment(1), points: increment(10) });
 
-      const nearbyUsers = await getDocs(query(collection(db, "users"), where("uid", "!=", user.uid)));
-      const batch = [];
-      for (const userDoc of nearbyUsers.docs) {
-        batch.push(addDoc(collection(db, "notifications"), {
-          user_id: userDoc.id,
-          type: "system",
-          title: "New Issue Nearby",
-          message: `${user.displayName || "A citizen"} reported a ${aiResult?.category_label || "civic"} issue: ${aiResult?.title || description.slice(0, 50)}`,
-          read: false,
-          report_id: reportId,
-          created_at: new Date().toISOString(),
-        }));
-      }
-      await Promise.all(batch);
-
       setSubmitted(true);
     } catch {
       setError("Failed to submit. Please try again.");
@@ -254,9 +256,39 @@ export default function ReportPage() {
               onChange={handleImageChange}
             />
             <Button variant="outline" className="w-full" onClick={getLocation}>
-              <MapPin className="mr-2 h-4 w-4" />
-              {location ? "Location Set" : "Get Current Location"}
+              <Navigation className="mr-2 h-4 w-4" />
+              {location && !useManual ? "Location Set (GPS)" : "Get Current Location"}
             </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">or enter manually</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Latitude"
+                type="number"
+                step="any"
+                value={manualLat}
+                onChange={(e) => setManualLat(e.target.value)}
+              />
+              <Input
+                placeholder="Longitude"
+                type="number"
+                step="any"
+                value={manualLng}
+                onChange={(e) => setManualLng(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" className="w-full" onClick={handleManualLocation} disabled={!manualLat || !manualLng}>
+              <MapPin className="mr-2 h-4 w-4" /> Set Manual Location
+            </Button>
+
             {location && <p className="text-xs text-muted-foreground text-center">{address}</p>}
           </CardContent>
         </Card>

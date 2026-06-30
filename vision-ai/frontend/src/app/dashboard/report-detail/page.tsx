@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import { useAuth } from "@/lib/firebase-context";
 import { getReport, upvoteReport } from "@/lib/firestore";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, increment, setDoc, getDoc } from "firebase/firestore";
+
+const LeafletMap = dynamic(() => import("@/components/leaflet-map"), { ssr: false });
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
@@ -286,6 +289,26 @@ export default function ReportDetailPage() {
           {report.address && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4" /> {report.address}
+            </div>
+          )}
+
+          {report.latitude && report.longitude && (
+            <div className="rounded-lg overflow-hidden border">
+              <LeafletMap
+                reports={[{
+                  id: report.id,
+                  lat: report.latitude,
+                  lng: report.longitude,
+                  category: report.category,
+                  severity: report.severity,
+                  title: report.title,
+                  status: report.status,
+                  address: report.address || "",
+                }]}
+                center={[report.latitude, report.longitude]}
+                zoom={15}
+                height="200px"
+              />
             </div>
           )}
 

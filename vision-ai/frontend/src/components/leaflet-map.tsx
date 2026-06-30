@@ -45,7 +45,15 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export default function LeafletMap({ reports, showHeatmap = false }: { reports: Report[]; showHeatmap?: boolean }) {
+interface MapProps {
+  reports: Report[];
+  showHeatmap?: boolean;
+  center?: [number, number];
+  zoom?: number;
+  height?: string;
+}
+
+export default function LeafletMap({ reports, showHeatmap = false, center, zoom, height }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const heatLayerRef = useRef<L.Layer | null>(null);
@@ -53,7 +61,10 @@ export default function LeafletMap({ reports, showHeatmap = false }: { reports: 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    const map = L.map(mapRef.current).setView([28.6139, 77.209], 12);
+    const defaultCenter: [number, number] = center || [28.6139, 77.209];
+    const defaultZoom = zoom || 12;
+
+    const map = L.map(mapRef.current).setView(defaultCenter, defaultZoom);
     mapInstanceRef.current = map;
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -145,5 +156,5 @@ export default function LeafletMap({ reports, showHeatmap = false }: { reports: 
     }
   }, [reports, showHeatmap]);
 
-  return <div ref={mapRef} className="h-[600px] w-full" />;
+  return <div ref={mapRef} style={{ height: height || "600px" }} className="w-full" />;
 }
