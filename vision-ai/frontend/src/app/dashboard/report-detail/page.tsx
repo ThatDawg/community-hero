@@ -293,22 +293,37 @@ export default function ReportDetailPage() {
           )}
 
           {report.latitude && report.longitude && (
-            <div className="rounded-lg overflow-hidden border">
-              <LeafletMap
-                reports={[{
-                  id: report.id,
-                  lat: report.latitude,
-                  lng: report.longitude,
-                  category: report.category,
-                  severity: report.severity,
-                  title: report.title,
-                  status: report.status,
-                  address: report.address || "",
-                }]}
-                center={[report.latitude, report.longitude]}
-                zoom={15}
-                height="200px"
-              />
+            <div className="rounded-lg overflow-hidden border space-y-2">
+              <div className="h-[200px] w-full">
+                <LeafletMap
+                  reports={[{
+                    id: report.id,
+                    lat: report.latitude,
+                    lng: report.longitude,
+                    category: report.category,
+                    severity: report.severity,
+                    title: report.title,
+                    status: report.status,
+                    address: report.address || "",
+                  }]}
+                  center={[report.latitude, report.longitude]}
+                  zoom={15}
+                  height="200px"
+                />
+              </div>
+              <div className="flex gap-2 px-3 pb-2">
+                <a
+                  href={`https://www.google.com/maps?q=${report.latitude},${report.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Open in Google Maps
+                </a>
+                <span className="text-xs text-muted-foreground">
+                  ({report.latitude.toFixed(4)}, {report.longitude.toFixed(4)})
+                </span>
+              </div>
             </div>
           )}
 

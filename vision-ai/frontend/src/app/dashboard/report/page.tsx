@@ -13,7 +13,7 @@ import { createReport } from "@/lib/firestore";
 import { analyzeReport, type AnalyzeResponse } from "@/lib/api";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, doc, updateDoc, increment } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, increment, setDoc, getDoc } from "firebase/firestore";
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
@@ -189,11 +189,27 @@ export default function ReportPage() {
         suggested_action: aiResult?.suggested_action || "",
       });
 
-      await updateDoc(doc(db, "users", user.uid), { reports_count: increment(1), points: increment(10) });
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        await updateDoc(userRef, { reports_count: increment(1), points: increment(10) });
+      } else {
+        await setDoc(userRef, {
+          uid: user.uid,
+          name: user.displayName || "Anonymous",
+          email: user.email || "",
+          role: "citizen",
+          reports_count: 1,
+          points: 10,
+          created_at: new Date().toISOString(),
+        }, { merge: true });
+      }
 
       setSubmitted(true);
-    } catch {
-      setError("Failed to submit. Please try again.");
+    } catch (err: unknown) {
+      console.error("Submit error:", err);
+      const msg = err instanceof Error ? err.message : "Failed to submit. Please try again.";
+      setError(msg);
     }
     setSubmitting(false);
   };

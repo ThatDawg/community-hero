@@ -32,12 +32,19 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+interface RecentReport {
+  id: string;
+  title: string;
+  status: string;
+  time: string;
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const [myReports, setMyReports] = useState<number>(0);
   const [myResolved, setMyResolved] = useState<number>(0);
   const [myPending, setMyPending] = useState<number>(0);
-  const [recentReports, setRecentReports] = useState<{ title: string; status: string; time: string }[]>([]);
+  const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -48,6 +55,7 @@ export default function DashboardPage() {
     }).catch(() => {});
     getAllReports().then((all) => {
       const sorted = all.slice(0, 5).map((r) => ({
+        id: r.id || "",
         title: r.title || r.description?.slice(0, 40) || "Untitled",
         status: r.status || "reported",
         time: r.created_at ? timeAgo(r.created_at) : "just now",
@@ -139,20 +147,22 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentReports.length > 0 ? recentReports.map((item, i) => (
-              <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0">
-                <div>
-                  <p className="font-medium">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{item.time}</p>
+            {recentReports.length > 0 ? recentReports.map((item) => (
+              <Link key={item.id} href={`/dashboard/report-detail?id=${item.id}`}>
+                <div className="flex items-center justify-between border-b pb-2 last:border-0 hover:bg-accent/50 cursor-pointer rounded p-1 transition">
+                  <div>
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">{item.time}</p>
+                  </div>
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs font-medium ${
+                      statusColors[item.status] || "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {item.status.replace("_", " ")}
+                  </span>
                 </div>
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-medium ${
-                    statusColors[item.status] || "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  {item.status.replace("_", " ")}
-                </span>
-              </div>
+              </Link>
             )) : (
               <p className="text-sm text-muted-foreground text-center py-4">No reports yet. Be the first to report an issue!</p>
             )}
