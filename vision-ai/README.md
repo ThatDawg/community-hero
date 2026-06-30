@@ -10,19 +10,20 @@ Civic issues like potholes, garbage accumulation, broken streetlights, and water
 
 ## Features
 
-### For Citizens
-- **One-Tap Reporting** — Upload a photo, AI auto-categorizes and routes to the right department
-- **Real-Time Tracking** — Monitor your report status from submission to resolution
+### Citizen Features
+- **One-Tap Reporting** — Upload photo, AI auto-categorizes with YOLO, Gemini analyzes root cause + department
+- **Real-Time Tracking** — Monitor report status from submission to resolution
 - **AI Chatbot** — Voice-enabled assistant with 12-language translation
 - **Gamification** — Earn points, badges, and climb the leaderboard
 - **Community Verification** — 3-verifier threshold ensures quality reports
+- **Nearby Issues** — Discover issues within 1-25km radius
 
-### For Volunteers
+### Volunteer Features
 - **Claim Issues** — Browse and claim nearby issues to resolve
 - **Task Management** — Track assigned issues through completion
 - **Impact Dashboard** — See your contribution to the community
 
-### For Government Officials
+### Government/Official Features
 - **Live Dashboard** — Real-time view of all issues with status management
 - **AI Analytics** — Gemini-powered insights and trend analysis
 - **Department Routing** — Automatic assignment to Public Works, Sanitation, Electrical, etc.
@@ -38,30 +39,37 @@ Civic issues like potholes, garbage accumulation, broken streetlights, and water
 │                                                          │
 │  Image ──→ YOLO v8 ──→ 9 Civic Categories               │
 │           │              (pothole, garbage, etc.)        │
-│           │                                              │
 │           ▼                                              │
 │  Gemini 2.5 Flash ──→ Title, Department, Priority        │
 │           │              Root Cause, Actions             │
-│           │                                              │
 │           ▼                                              │
-│  Duplicate Detection ──→ Compares with existing          │
-│           │              reports using Gemini             │
+│  Duplicate Detection ──→ Prevents duplicate reports      │
 │           │                                              │
-│           ▼                                              │
+│  Severity Prediction ──→ Critical/High/Medium/Low       │
+│           │                                              │
+│  Department Classification ──→ Auto-routes to dept       │
+│           │                                              │
+│  Report Generation ──→ AI summaries for officials        │
+│           │                                              │
+│  Resolution Prediction ──→ Timeline estimation           │
+│                                                          │
 │  Whisper (Optional) ──→ Voice transcription              │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ### AI Services
-| Service | Model | Purpose |
-|---------|-------|---------|
-| Image Detection | YOLO v8 | Detect potholes, garbage, streetlights, etc. |
-| Analysis | Gemini 2.5 Flash | Generate title, department, priority, root cause |
-| Duplicate Check | Gemini 2.5 Flash | Prevent duplicate reports |
-| Chatbot | Gemini 2.5 Flash | Citizen assistance with context |
-| Voice | Whisper (base) | Transcribe voice reports |
-| Progress Summary | Gemini 2.5 Flash | Generate official reports |
+
+| Module | Purpose |
+|--------|---------|
+| `yolo.py` | Image detection for 9 civic categories |
+| `gemini.py` | Core Gemini integration for analysis |
+| `duplicate_detection.py` | Prevent duplicate reports |
+| `severity.py` | Predict issue severity |
+| `department_classifier.py` | Auto-route to departments |
+| `report_generator.py` | AI summaries for officials |
+| `prediction.py` | Resolution time estimation |
+| `prompts.py` | Centralized prompt templates |
 
 ## Google Technologies Used
 
@@ -79,19 +87,34 @@ Civic issues like potholes, garbage accumulation, broken streetlights, and water
 
 ## Screenshots
 
-> Screenshots available in `docs/screenshots/`
-
 | Page | Description |
 |------|-------------|
-| Landing | Hero section with platform overview |
-| Auth | Google/email login with role selection |
-| Dashboard | Stats, recent activity, quick actions |
-| Report | Photo upload with AI analysis |
-| Map | Leaflet heatmap with filters |
-| Chatbot | AI assistant with voice input |
-| Analytics | Charts and Gemini insights |
-| Government | Official dashboard with status management |
-| Volunteer | Task queue and issue management |
+| ![Landing](docs/screenshots/landing.png) | Hero section with platform overview |
+| ![Auth](docs/screenshots/auth.png) | Google/email login with role selection |
+| ![Dashboard](docs/screenshots/dashboard.png) | Stats, recent activity, quick actions |
+| ![Report](docs/screenshots/report.png) | Photo upload with AI analysis |
+| ![Map](docs/screenshots/map.png) | Leaflet heatmap with filters |
+| ![Chatbot](docs/screenshots/chatbot.png) | AI assistant with voice input |
+| ![Analytics](docs/screenshots/analytics.png) | Charts and Gemini insights |
+| ![Government](docs/screenshots/government.png) | Official dashboard with status management |
+| ![Volunteer](docs/screenshots/volunteer.png) | Task queue and issue management |
+
+> Screenshots stored in `docs/screenshots/`
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 15, React, TypeScript, Tailwind CSS, Shadcn UI, Framer Motion |
+| Backend | FastAPI (Python), YOLO v8, Gemini 2.5 Flash |
+| Database | Firebase Firestore |
+| Auth | Firebase Authentication |
+| Storage | Firebase Storage |
+| Maps | Leaflet + OpenStreetMap |
+| Notifications | Firebase Cloud Messaging |
+| Voice | Web Speech API + Whisper |
+| Hosting | Firebase Hosting |
+| Backend Deploy | Google Cloud Run |
 
 ## Installation
 
@@ -99,64 +122,83 @@ Civic issues like potholes, garbage accumulation, broken streetlights, and water
 - Node.js 18+
 - Python 3.10+
 - Firebase CLI (`npm install -g firebase-tools`)
-- Google Cloud SDK (for Cloud Run)
+- Google Cloud SDK
 
 ### Frontend Setup
 ```bash
-cd vision-ai/frontend
+cd frontend
 npm install
-
-# Copy and configure environment variables
 cp .env.example .env.local
 # Edit .env.local with your Firebase and Gemini keys
-
 npm run dev
 ```
 
 ### Backend Setup
 ```bash
-cd vision-ai/backend
+cd backend
 pip install -r requirements.txt
-
-# Copy and configure environment variables
 cp .env.example .env
 # Edit .env with your API keys
-
 python -m app.main
 ```
 
-### Firebase Setup
-1. Create a Firebase project at https://console.firebase.google.com
-2. Enable Authentication (Google + Email)
-3. Create Firestore database
-4. Enable Storage
-5. Enable Cloud Messaging
-6. Copy config to `.env.local`
+### Docker Setup
+```bash
+docker-compose up
+```
 
 ## Deployment
 
 ### Frontend (Firebase Hosting)
 ```bash
-cd vision-ai/frontend
-npm run build
-cd ..
+firebase login
 firebase deploy --only hosting,firestore:rules
 ```
 
 ### Backend (Google Cloud Run)
 ```bash
-cd vision-ai
 gcloud run deploy vision-ai-backend \
   --source . \
   --region us-central1 \
   --allow-unauthenticated
 ```
 
-### Docker
+### Cloud Build (CI/CD)
 ```bash
-cd vision-ai
-docker build -t vision-ai-backend .
-docker run -p 8000:8000 vision-ai-backend
+gcloud builds submit --config deployment/cloudrun.yaml
+```
+
+## AI Workflow
+
+```
+1. Citizen uploads photo + description
+         │
+         ▼
+2. YOLO detects objects (pothole, garbage, etc.)
+         │
+         ▼
+3. Gemini analyzes: title, department, priority, root cause
+         │
+         ▼
+4. Duplicate detection checks existing reports
+         │
+         ▼
+5. Severity prediction determines urgency
+         │
+         ▼
+6. Department classifier routes to responsible team
+         │
+         ▼
+7. Report saved to Firestore
+         │
+         ▼
+8. FCM notifications sent to nearby volunteers/officials
+         │
+         ▼
+9. Community verification (3 verifiers needed)
+         │
+         ▼
+10. Government dashboard shows real-time status
 ```
 
 ## Folder Structure
@@ -166,7 +208,9 @@ community-hero/
 ├── README.md                    # This file
 ├── LICENSE                      # MIT License
 ├── .gitignore                   # Git ignore rules
+├── .env.example                 # Root environment template
 ├── Dockerfile                   # Backend Docker config
+├── docker-compose.yml           # Local development
 ├── cloudbuild.yaml              # Google Cloud Build CI/CD
 ├── firebase.json                # Firebase Hosting config
 ├── firestore.rules              # Firestore security rules
@@ -178,17 +222,9 @@ community-hero/
 │   │   │   ├── page.tsx         # Landing page
 │   │   │   ├── auth/            # Authentication
 │   │   │   └── dashboard/       # Main dashboard
-│   │   │       ├── page.tsx     # Home
-│   │   │       ├── report/      # Report submission
-│   │   │       ├── map/         # Live map
-│   │   │       ├── chat/        # AI chatbot
-│   │   │       ├── analytics/   # Analytics
-│   │   │       ├── government/  # Official view
-│   │   │       ├── volunteer/   # Volunteer tasks
-│   │   │       └── ...
 │   │   ├── components/          # Reusable UI components
 │   │   └── lib/                 # Firebase, API, utilities
-│   ├── .env.example             # Environment template
+│   ├── .env.example             # Frontend env template
 │   └── package.json
 │
 ├── backend/                     # FastAPI Backend
@@ -197,28 +233,38 @@ community-hero/
 │   │   ├── ai/                  # AI services
 │   │   │   ├── gemini.py        # Gemini integration
 │   │   │   ├── yolo.py          # YOLO detection
-│   │   │   └── prompts.py       # Prompt templates
+│   │   │   ├── prompts.py       # Prompt templates
+│   │   │   ├── duplicate_detection.py
+│   │   │   ├── severity.py
+│   │   │   ├── department_classifier.py
+│   │   │   ├── report_generator.py
+│   │   │   └── prediction.py
 │   │   ├── routers/             # API routes
-│   │   │   └── routes.py        # All endpoints
 │   │   ├── schemas/             # Pydantic models
-│   │   │   └── models.py        # Request/response models
+│   │   ├── services/            # Business logic
+│   │   │   ├── report_service.py
+│   │   │   ├── notification_service.py
+│   │   │   └── verification_service.py
+│   │   ├── middleware/          # Auth, rate limiting, logging
 │   │   ├── database/            # Firebase integration
-│   │   │   └── firebase.py      # Firestore client
 │   │   └── utils/               # Config and helpers
-│   │       └── config.py        # Environment variables
-│   ├── requirements.txt         # Python dependencies
-│   ├── .env.example             # Environment template
-│   └── Dockerfile               # Docker config
-│
-├── yolo-models/                 # YOLO training
-│   └── train.py                 # Custom model training
+│   ├── tests/                   # Unit tests
+│   ├── requirements.txt
+│   ├── .env.example
+│   └── Dockerfile
 │
 ├── docs/                        # Documentation
-│   ├── architecture.md          # System architecture
+│   ├── architecture.md
 │   └── screenshots/             # UI screenshots
 │
-└── deployment/                  # Deployment guides
-    └── README.md                # Deployment instructions
+├── deployment/                  # Deployment configs
+│   ├── firebase.json
+│   ├── firestore.rules
+│   ├── cloudrun.yaml
+│   └── README.md
+│
+└── yolo-models/                 # YOLO training
+    └── train.py
 ```
 
 ## API Endpoints
@@ -234,8 +280,6 @@ community-hero/
 | GET | `/health` | Health check |
 
 ## YOLO Categories
-
-The YOLO model detects 9 civic issue categories:
 
 | ID | Category | Severity |
 |----|----------|----------|
@@ -264,3 +308,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Team
 
 Built with ❤️ for the Google AI Hackathon
+
+- [Team Member 1] - Frontend Development
+- [Team Member 2] - Backend Development
+- [Team Member 3] - AI/ML Engineering
+- [Team Member 4] - UI/UX Design
