@@ -2,34 +2,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+      allow read, create, update: if request.auth != null && request.auth.uid == userId;
     }
 
     match /reports/{reportId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && (!resource.data.exists('deleted') || resource.data.deleted != true);
       allow create: if request.auth != null;
       allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.user_id
+        && resource.data.status == "reported";
 
       match /comments/{commentId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null;
-        allow update: if request.auth != null;
-        allow delete: if request.auth != null;
+        allow read, create: if request.auth != null;
+        allow update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
       }
 
       match /verifications/{verificationId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null;
+        allow read, create: if request.auth != null;
       }
     }
 
     match /notifications/{notificationId} {
-      allow read: if request.auth != null;
+      allow read, update: if request.auth != null && request.auth.uid == resource.data.user_id;
       allow create: if request.auth != null;
-      allow update: if request.auth != null;
       allow delete: if request.auth != null;
     }
 
@@ -44,9 +40,7 @@ service cloud.firestore {
     }
 
     match /volunteers/{volunteerId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+      allow read, create, update: if request.auth != null;
     }
   }
 }

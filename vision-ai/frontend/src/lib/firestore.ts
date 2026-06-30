@@ -6,9 +6,9 @@ import {
   updateDoc,
   doc,
   increment,
-  query,
-  where,
+  deleteDoc,
   getDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 
 const REPORTS_COLLECTION = "reports";
@@ -32,6 +32,8 @@ interface ReportData {
   upvotes?: number;
   created_at?: string;
   updated_at?: string;
+  deleted?: boolean;
+  deletedAt?: unknown;
   [key: string]: unknown;
 }
 
@@ -39,6 +41,7 @@ export async function createReport(data: ReportData) {
   const docRef = await addDoc(collection(db, REPORTS_COLLECTION), {
     ...data,
     upvotes: 0,
+    deleted: false,
     status: data.status || "reported",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -47,10 +50,10 @@ export async function createReport(data: ReportData) {
 }
 
 export async function getAllReports() {
-  const q = query(collection(db, REPORTS_COLLECTION));
-  const snapshot = await getDocs(q);
+  const snapshot = await getDocs(collection(db, REPORTS_COLLECTION));
   return snapshot.docs
     .map((d) => ({ id: d.id, ...d.data() } as ReportData & { id: string }))
+    .filter((r) => r.deleted !== true)
     .sort((a, b) => {
       const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
       const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -59,13 +62,10 @@ export async function getAllReports() {
 }
 
 export async function getUserReports(userId: string) {
-  const q = query(
-    collection(db, REPORTS_COLLECTION),
-    where("user_id", "==", userId)
-  );
-  const snapshot = await getDocs(q);
+  const snapshot = await getDocs(collection(db, REPORTS_COLLECTION));
   return snapshot.docs
     .map((d) => ({ id: d.id, ...d.data() } as ReportData & { id: string }))
+    .filter((r) => r.user_id === userId && r.deleted !== true)
     .sort((a, b) => {
       const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
       const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -75,12 +75,35 @@ export async function getUserReports(userId: string) {
 
 export async function getReport(reportId: string) {
   const docSnap = await getDoc(doc(db, REPORTS_COLLECTION, reportId));
-  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+  if (!docSnap.exists()) return null;
+  const data = docSnap.data();
+  if (data.deleted === true) return null;
+  return { id: docSnap.id, ...data };
 }
 
 export async function updateReportStatus(reportId: string, status: string) {
   const ref = doc(db, REPORTS_COLLECTION, reportId);
   await updateDoc(ref, { status, updated_at: new Date().toISOString() });
+}
+
+export async function updateReport(reportId: string, data: Partial<ReportData>) {
+  const ref = doc(db, REPORTS_COLLECTION, reportId);
+  await updateDoc(ref, { ...data, updated_at: new Date().toISOString() });
+}
+
+export async function softDeleteReport(reportId: string) {
+  const ref = doc(db, REPORTS_COLLECTION, reportId);
+  await updateDoc(ref, {
+    status: "cancelled",
+    deleted: true,
+    deletedAt: serverTimestamp(),
+    updated_at: new Date().toISOString(),
+  });
+}
+
+export async function hardDeleteReport(reportId: string) {
+  const ref = doc(db, REPORTS_COLLECTION, reportId);
+  await deleteDoc(ref);
 }
 
 export async function upvoteReport(reportId: string) {
