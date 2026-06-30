@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bell, CheckCircle, AlertTriangle, CheckCheck } from "lucide-react";
+import { useAuth } from "@/lib/firebase-context";
+import { db } from "@/lib/firebase";
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, where } from "firebase/firestore";
 
 interface Notification {
   id: string;
@@ -11,57 +14,39 @@ interface Notification {
   title: string;
   message: string;
   read: boolean;
-  createdAt: Date;
+  report_id?: string;
+  created_at: string;
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "status",
-    title: "Report Verified",
-    message: "Your pothole report on Main Street has been verified by 3 citizens.",
-    read: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30),
-  },
-  {
-    id: "2",
-    type: "verification",
-    title: "Verification Request",
-    message: "A new water leakage report near your location needs verification.",
-    read: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-  {
-    id: "3",
-    type: "comment",
-    title: "New Comment",
-    message: "Official response added to your garbage overflow report.",
-    read: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-  },
-  {
-    id: "4",
-    type: "system",
-    title: "Achievement Unlocked",
-    message: "Congratulations! You earned the 'Community Hero' badge.",
-    read: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48),
-  },
-];
-
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, "notifications"),
+      where("user_id", "==", user.uid),
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification))
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setNotifications(data);
+      setLoading(false);
+    }, () => setLoading(false));
+    return unsub;
+  }, [user]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+  const markAsRead = async (id: string) => {
+    await updateDoc(doc(db, "notifications", id), { read: true });
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    const unread = notifications.filter((n) => !n.read);
+    await Promise.all(unread.map((n) => updateDoc(doc(db, "notifications", n.id), { read: true })));
   };
 
   const getIcon = (type: string) => {
@@ -73,6 +58,14 @@ export default function NotificationsPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -81,9 +74,7 @@ export default function NotificationsPage() {
           <p className="text-muted-foreground">{unreadCount} unread</p>
         </div>
         {unreadCount > 0 && (
-          <Button variant="outline" onClick={markAllAsRead}>
-            Mark all as read
-          </Button>
+          <Button variant="outline" onClick={markAllAsRead}>Mark all as read</Button>
         )}
       </div>
 
@@ -101,21 +92,25 @@ export default function NotificationsPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-medium">{notification.title}</h3>
-                  {!notification.read && (
-                    <span className="h-2 w-2 rounded-full bg-primary" />
-                  )}
+                  {!notification.read && <span className="h-2 w-2 rounded-full bg-primary" />}
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {notification.message}
-                </p>
+                <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {notification.createdAt.toLocaleDateString()}{" "}
-                  {notification.createdAt.toLocaleTimeString()}
+                  {notification.created_at ? new Date(notification.created_at).toLocaleString() : ""}
                 </p>
               </div>
             </CardContent>
           </Card>
         ))}
+        {notifications.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Bell className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-medium">No notifications</h3>
+              <p className="mt-2 text-muted-foreground">You&apos;re all caught up!</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

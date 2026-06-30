@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, ThumbsUp } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/lib/firebase-context";
 import { getUserReports, upvoteReport } from "@/lib/firestore";
 
@@ -113,7 +114,8 @@ export default function MyReportsPage() {
 
       <div className="space-y-3">
         {filteredReports.map((report) => (
-          <div key={report.id} className="bg-white rounded-xl border p-4 hover:shadow-md transition">
+          <Link key={report.id} href={`/dashboard/report-detail?id=${report.id}`}>
+            <div className="bg-white rounded-xl border p-4 hover:shadow-md transition cursor-pointer">
             <div className="flex items-start gap-3">
               <span className="text-2xl">{categoryIcons[report.category] || "📍"}</span>
               <div className="flex-1 min-w-0">
@@ -130,7 +132,7 @@ export default function MyReportsPage() {
                 </div>
               </div>
               <button
-                onClick={() => handleUpvote(report.id)}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUpvote(report.id); }}
                 disabled={upvotedIds.includes(report.id)}
                 className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition ${
                   upvotedIds.includes(report.id) ? "bg-primary/10 cursor-default" : "hover:bg-muted cursor-pointer"
@@ -141,6 +143,7 @@ export default function MyReportsPage() {
               </button>
             </div>
           </div>
+          </Link>
         ))}
       </div>
 

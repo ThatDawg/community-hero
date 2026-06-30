@@ -1,112 +1,143 @@
 "use client";
 
-import { useAuth } from "@/lib/firebase-context";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Medal, Star, Award } from "lucide-react";
+import { useAuth } from "@/lib/firebase-context";
+import { getAllReports } from "@/lib/firestore";
 
-const leaderboard = [
-  { rank: 1, name: "Priya Sharma", reports: 47, verified: 42, reputation: 1250, badges: ["Gold Reporter", "Community Hero"] },
-  { rank: 2, name: "Rahul Kumar", reports: 38, verified: 35, reputation: 980, badges: ["Silver Reporter"] },
-  { rank: 3, name: "Anita Singh", reports: 32, verified: 28, reputation: 850, badges: ["Bronze Reporter"] },
-  { rank: 4, name: "Vikram Patel", reports: 28, verified: 25, reputation: 720, badges: ["Rising Star"] },
-  { rank: 5, name: "Meera Reddy", reports: 24, verified: 20, reputation: 650, badges: ["Active Citizen"] },
-];
-
-const badges = [
-  { name: "First Report", icon: "🎯", description: "Submit your first report", unlocked: true },
-  { name: "Community Hero", icon: "🦸", description: "Verify 10 reports", unlocked: true },
-  { name: "Gold Reporter", icon: "🥇", description: "Submit 25 reports", unlocked: true },
-  { name: "Streak Master", icon: "🔥", description: "7-day reporting streak", unlocked: false },
-  { name: "AI Champion", icon: "🤖", description: "Use AI chat 50 times", unlocked: false },
-  { name: "Voice Reporter", icon: "🎤", description: "Submit 5 voice reports", unlocked: false },
-];
+interface UserData {
+  userId: string;
+  userName: string;
+  reports: number;
+  resolved: number;
+}
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
+  const [leaderboard, setLeaderboard] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userStats, setUserStats] = useState<{ reports: number; resolved: number; points: number } | null>(null);
+
+  useEffect(() => {
+    getAllReports().then((reports) => {
+      const userMap: Record<string, UserData> = {};
+      reports.forEach((r) => {
+        const uid = r.user_id || "unknown";
+        if (!userMap[uid]) {
+          userMap[uid] = { userId: uid, userName: r.user_name || "Anonymous", reports: 0, resolved: 0 };
+        }
+        userMap[uid].reports++;
+        if (r.status === "resolved") userMap[uid].resolved++;
+      });
+
+      const sorted = Object.values(userMap)
+        .sort((a, b) => (b.reports * 10 + b.resolved * 20) - (a.reports * 10 + a.resolved * 20))
+        .slice(0, 10);
+
+      setLeaderboard(sorted);
+
+      if (user) {
+        const me = userMap[user.uid];
+        if (me) {
+          setUserStats({ reports: me.reports, resolved: me.resolved, points: me.reports * 10 + me.resolved * 20 });
+        } else {
+          setUserStats({ reports: 0, resolved: 0, points: 0 });
+        }
+      }
+
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [user]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1: return <Trophy className="h-5 w-5 text-yellow-500" />;
       case 2: return <Medal className="h-5 w-5 text-gray-400" />;
       case 3: return <Medal className="h-5 w-5 text-amber-600" />;
-      default: return <span className="text-muted-foreground">#{rank}</span>;
+      default: return <span className="text-muted-foreground text-sm font-medium">#{rank}</span>;
     }
   };
+
+  const getBadges = (reports: number, resolved: number) => {
+    const b = [];
+    if (reports >= 1) b.push({ name: "First Report", icon: "🎯" });
+    if (reports >= 5) b.push({ name: "Active Citizen", icon: "🌟" });
+    if (reports >= 10) b.push({ name: "Community Hero", icon: "🦸" });
+    if (resolved >= 5) b.push({ name: "Problem Solver", icon: "✅" });
+    if (reports >= 25) b.push({ name: "Gold Reporter", icon: "🥇" });
+    if (resolved >= 20) b.push({ name: "Champion", icon: "🏆" });
+    return b;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Leaderboard & Badges</h1>
-        <p className="text-muted-foreground">Top contributors and achievements</p>
+        <h1 className="text-2xl font-bold">Leaderboard</h1>
+        <p className="text-muted-foreground">Top contributors based on real reports</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-500" />
-              Top Contributors
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {leaderboard.map((entry) => (
-                <div
-                  key={entry.rank}
-                  className={`flex items-center gap-4 rounded-lg border p-3 ${
-                    entry.name === user?.displayName ? "border-primary bg-primary/5" : ""
-                  }`}
-                >
-                  <div className="flex h-8 w-8 items-center justify-center">
-                    {getRankIcon(entry.rank)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{entry.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {entry.reports} reports • {entry.verified} verified
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    <span className="font-semibold">{entry.reputation}</span>
-                  </div>
-                </div>
-              ))}
+      {userStats && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Your Stats</p>
+                <p className="text-sm text-muted-foreground">{userStats.reports} reports • {userStats.resolved} resolved</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-yellow-500" />
+                <span className="text-2xl font-bold">{userStats.points}</span>
+                <span className="text-sm text-muted-foreground">pts</span>
+              </div>
             </div>
           </CardContent>
         </Card>
+      )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5" />
-              Badges
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              {badges.map((badge) => (
-                <div
-                  key={badge.name}
-                  className={`rounded-lg border p-3 text-center ${
-                    badge.unlocked ? "bg-primary/5" : "opacity-50"
-                  }`}
-                >
-                  <div className="text-3xl">{badge.icon}</div>
-                  <p className="mt-1 text-sm font-medium">{badge.name}</p>
-                  <p className="text-xs text-muted-foreground">{badge.description}</p>
-                  {badge.unlocked ? (
-                    <Badge className="mt-2" variant="secondary">Unlocked</Badge>
-                  ) : (
-                    <Badge className="mt-2" variant="outline">Locked</Badge>
-                  )}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500" /> Top Contributors
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {leaderboard.map((entry, i) => (
+              <div key={entry.userId} className={`flex items-center gap-4 rounded-lg border p-3 ${
+                entry.userId === user?.uid ? "border-primary bg-primary/5" : ""
+              }`}>
+                <div className="flex h-8 w-8 items-center justify-center">{getRankIcon(i + 1)}</div>
+                <div className="flex-1">
+                  <p className="font-medium">{entry.userName}</p>
+                  <p className="text-xs text-muted-foreground">{entry.reports} reports • {entry.resolved} resolved</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <span className="font-semibold">{entry.reports * 10 + entry.resolved * 20}</span>
+                </div>
+                <div className="flex gap-1">
+                  {getBadges(entry.reports, entry.resolved).slice(0, 3).map((b) => (
+                    <span key={b.name} className="text-lg" title={b.name}>{b.icon}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {leaderboard.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-8">No reports yet. Be the first!</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

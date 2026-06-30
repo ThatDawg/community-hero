@@ -60,7 +60,7 @@ export default function DashboardPage() {
     { title: "My Reports", value: String(myReports), icon: AlertTriangle, change: "Total submitted" },
     { title: "Resolved", value: String(myResolved), icon: CheckCircle, change: myReports ? `${Math.round((myResolved / myReports) * 100)}% rate` : "0% rate" },
     { title: "Pending", value: String(myPending), icon: Clock, change: "Awaiting resolution" },
-    { title: "Total Issues", value: String(myReports), icon: TrendingUp, change: "Community reports" },
+    { title: "Community Total", value: String(recentReports.length), icon: TrendingUp, change: "All reports" },
   ];
 
   const quickActions = [
