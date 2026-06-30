@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Clock, ThumbsUp, Send, CheckCircle, Share2, Languages } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ThumbsUp, Send, CheckCircle, Share2, Languages, FileText, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/firebase-context";
 import { getReport, upvoteReport } from "@/lib/firestore";
 import { db } from "@/lib/firebase";
@@ -73,6 +73,8 @@ export default function ReportDetailPage() {
   const [verified, setVerified] = useState(false);
   const [translatedDesc, setTranslatedDesc] = useState("");
   const [translating, setTranslating] = useState(false);
+  const [progressSummary, setProgressSummary] = useState("");
+  const [generatingSummary, setGeneratingSummary] = useState(false);
 
   useEffect(() => {
     if (!reportId) { setLoading(false); return; }
@@ -180,6 +182,25 @@ export default function ReportDetailPage() {
     } else {
       navigator.clipboard.writeText(window.location.href);
     }
+  };
+
+  const handleGenerateSummary = async () => {
+    if (!report) return;
+    setGeneratingSummary(true);
+    try {
+      const response = await fetch(GEMINI_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Generate a professional progress summary for this civic issue report for government officials:\n\nReport ID: ${report.id}\nTitle: ${report.title}\nStatus: ${report.status}\nDepartment: ${report.department || "Unassigned"}\nComments: ${comments.map((c) => c.text).join("; ") || "None"}\n\nProvide a brief, professional summary covering: current status, next steps, department action required, estimated timeline, any risks.` }] }],
+        }),
+      });
+      const data = await response.json();
+      setProgressSummary(data.candidates?.[0]?.content?.parts?.[0]?.text || "Summary generation failed");
+    } catch {
+      setProgressSummary("Summary generation failed. Please try again.");
+    }
+    setGeneratingSummary(false);
   };
 
   if (loading) {
@@ -295,7 +316,18 @@ export default function ReportDetailPage() {
                 <CheckCircle className="mr-2 h-4 w-4" /> {verified ? "Verified" : "Verify Issue"}
               </Button>
             )}
+            <Button variant="outline" onClick={handleGenerateSummary} disabled={generatingSummary}>
+              {generatingSummary ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+              {generatingSummary ? "Generating..." : "AI Summary"}
+            </Button>
           </div>
+
+          {progressSummary && (
+            <div className="rounded-lg bg-orange-50 p-3 dark:bg-orange-950 whitespace-pre-wrap">
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-1">Official Progress Summary</p>
+              <p className="text-sm text-orange-700 dark:text-orange-300">{progressSummary}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -7,8 +7,9 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { requestNotificationPermission, onForegroundMessage } from "@/lib/notifications";
+import { doc, getDoc } from "firebase/firestore";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -33,6 +34,7 @@ export default function DashboardLayout({
   const { user, loading } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userRole, setUserRole] = useState("citizen");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -41,6 +43,11 @@ export default function DashboardLayout({
     if (user) {
       requestNotificationPermission(user.uid);
       const unsub = onForegroundMessage(() => {});
+      getDoc(doc(db, "users", user.uid)).then((snap) => {
+        if (snap.exists()) {
+          setUserRole(snap.data().role || "citizen");
+        }
+      });
       return unsub;
     }
   }, [user, loading, router]);
@@ -69,7 +76,12 @@ export default function DashboardLayout({
     { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
     { href: "/dashboard/leaderboard", label: "Leaderboard", icon: Trophy },
-    { href: "/dashboard/government", label: "Official View", icon: Shield },
+    ...(userRole === "volunteer" || userRole === "admin"
+      ? [{ href: "/dashboard/volunteer", label: "Volunteer", icon: Shield }]
+      : []),
+    ...(userRole === "official" || userRole === "admin"
+      ? [{ href: "/dashboard/government", label: "Official View", icon: Shield }]
+      : []),
   ];
 
   const SidebarContent = () => (

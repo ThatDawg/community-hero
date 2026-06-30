@@ -1,44 +1,77 @@
-"""YOLO models placeholder - create your custom trained model here.
+# Vision AI - Custom YOLO Dataset
 
-To train a custom YOLO model for civic issues:
-1. Collect and label images of potholes, garbage, broken streetlights, etc.
-2. Use Roboflow or LabelImg for annotation
-3. Train with: yolo detect train data=civic_dataset.yaml model=yolov8n.pt epochs=50
-4. Place the trained model in this directory as civic_issues.pt
-"""
+## Directory Structure
 
-CIVIC_CLASSES = {
-    0: "pothole",
-    1: "garbage",
-    2: "overflowing_bin",
-    3: "broken_streetlight",
-    4: "water_leakage",
-    5: "fallen_tree",
-    6: "road_crack",
-    7: "illegal_dumping",
-    8: "open_manhole",
-}
+```
+yolo-models/
+├── train.py              # Training script
+├── dataset.yaml          # Dataset config (auto-generated)
+├── dataset/              # Your training data
+│   ├── train/
+│   │   ├── images/       # Training images
+│   │   └── labels/       # Training labels (YOLO format)
+│   ├── val/
+│   │   ├── images/       # Validation images
+│   │   └── labels/       # Validation labels
+│   └── test/
+│       ├── images/       # Test images
+│       └── labels/       # Test labels
+├── vision_ai_model.pt    # Trained model (after training)
+└── README.py             # This file
+```
 
-DATASET_CONFIG = """# civic_dataset.yaml
-path: ./civic_dataset
-train: train/images
-val: val/images
+## YOLO Label Format
 
-names:
-  0: pothole
-  1: garbage
-  2: overflowing_bin
-  3: broken_streetlight
-  4: water_leakage
-  5: fallen_tree
-  6: road_crack
-  7: illegal_dumping
-  8: open_manhole
-"""
+Each image has a corresponding `.txt` file with:
+```
+class_id  x_center  y_center  width  height
+```
 
-if __name__ == "__main__":
-    print("Civic Issue Classes:")
-    for idx, name in CIVIC_CLASSES.items():
-        print(f"  {idx}: {name}")
-    print("\nTo train your model:")
-    print("  yolo detect train data=civic_dataset.yaml model=yolov8n.pt epochs=50 imgsz=640")
+All values normalized 0-1. Example for a pothole at center:
+```
+0 0.5 0.5 0.2 0.15
+```
+
+## Classes (IDs 0-8)
+
+| ID | Class | Severity |
+|----|-------|----------|
+| 0 | pothole | high |
+| 1 | garbage | medium |
+| 2 | overflowing_bin | medium |
+| 3 | broken_streetlight | medium |
+| 4 | water_leakage | critical |
+| 5 | fallen_tree | high |
+| 6 | road_crack | high |
+| 7 | illegal_dumping | medium |
+| 8 | open_manhole | critical |
+
+## Training
+
+```bash
+# Install dependencies
+pip install ultralytics pyyaml
+
+# Prepare dataset (place images/labels in dataset/)
+python train.py --data dataset.yaml --epochs 100 --img-size 640
+
+# Validate
+python train.py --mode validate
+
+# Export to ONNX
+python train.py --mode export
+```
+
+## Data Sources
+
+Public datasets for fine-tuning:
+- Roboflow Universe (search "pothole", "road damage", "garbage detection")
+- Indian Pothole Detection Dataset
+- Road Damage Dataset Challenge
+
+## Notes
+
+- Start with `yolov8n.pt` (nano) for fast inference
+- Use `yolov8s.pt` or `yolov8m.pt` for better accuracy
+- Minimum 100 images per class recommended
+- Use data augmentation (rotation, flip, brightness) for better generalization

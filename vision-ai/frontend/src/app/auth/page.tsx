@@ -21,17 +21,18 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [role, setRole] = useState("citizen");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const saveUserProfile = async (uid: string, displayName: string, email: string, photoURL?: string) => {
+  const saveUserProfile = async (uid: string, displayName: string, email: string, photoURL?: string, userRole?: string) => {
     await setDoc(doc(db, "users", uid), {
       uid,
       displayName,
       email,
       photoURL: photoURL || "",
-      role: "citizen",
+      role: userRole || "citizen",
       reports_count: 0,
       verified_count: 0,
       points: 0,
@@ -53,7 +54,7 @@ export default function AuthPage() {
         if (name) {
           await updateProfile(cred.user, { displayName: name });
         }
-        await saveUserProfile(cred.user.uid, name || "Citizen", email);
+        await saveUserProfile(cred.user.uid, name || "Citizen", email, undefined, role);
       }
       router.push("/dashboard");
     } catch (err: unknown) {
@@ -131,6 +132,21 @@ export default function AuthPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
+              </div>
+            )}
+            {!isLogin && (
+              <div className="space-y-1">
+                <Label htmlFor="role">I am a</Label>
+                <select
+                  id="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="citizen">Citizen</option>
+                  <option value="volunteer">Volunteer</option>
+                  <option value="official">Government Official</option>
+                </select>
               </div>
             )}
             <div className="space-y-1">

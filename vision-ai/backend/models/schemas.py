@@ -11,11 +11,18 @@ class SeverityLevel(str, Enum):
 
 
 class ReportStatus(str, Enum):
-    PENDING = "pending"
+    REPORTED = "reported"
     VERIFIED = "verified"
     IN_PROGRESS = "in_progress"
     RESOLVED = "resolved"
     REJECTED = "rejected"
+
+
+class UserRole(str, Enum):
+    CITIZEN = "citizen"
+    VOLUNTEER = "volunteer"
+    OFFICIAL = "official"
+    ADMIN = "admin"
 
 
 class DetectionResult(BaseModel):
@@ -60,3 +67,36 @@ class ChatResponse(BaseModel):
 
 class VoiceResponse(BaseModel):
     text: str
+
+
+class ProgressSummaryRequest(BaseModel):
+    report_id: str
+    title: str
+    status: str
+    department: str
+    comments: List[str] = []
+
+
+class ProgressSummaryResponse(BaseModel):
+    summary: str
+
+
+class LeaderboardEntry(BaseModel):
+    user_id: str
+    user_name: str
+    reports_count: int
+    resolved_count: int
+    points: int
+    rank: int
+
+
+class VolunteerProfile(BaseModel):
+    user_id: str
+    user_name: str
+    specialties: List[str] = []
+    reports_verified: int = 0
+    reports_resolved: int = 0
+    available: bool = True
+    area_lat: Optional[float] = None
+    area_lng: Optional[float] = None
+    area_radius_km: float = 5.0

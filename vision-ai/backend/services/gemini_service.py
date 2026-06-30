@@ -106,3 +106,33 @@ If no duplicate, respond with ONLY "none"."""
     if result == "none" or not result:
         return None
     return result
+
+
+def generate_progress_summary(
+    report_id: str,
+    title: str,
+    status: str,
+    department: str,
+    comments: List[str],
+) -> str:
+    comments_text = "\n".join([f"- {c}" for c in comments]) if comments else "No comments yet."
+
+    prompt = f"""Generate a professional progress summary for this civic issue report for government officials.
+
+Report ID: {report_id}
+Title: {title}
+Current Status: {status}
+Assigned Department: {department}
+Comments:
+{comments_text}
+
+Provide a brief, professional summary covering:
+1. Current status and next steps
+2. Department action required
+3. Estimated timeline
+4. Any risks or blockers
+
+Keep it concise and actionable."""
+
+    response = model.generate_content(prompt)
+    return response.text.strip()
