@@ -11,7 +11,8 @@ import { useRouter } from "next/navigation";
 import { createReport } from "@/lib/firestore";
 import { analyzeReport, type AnalyzeResponse } from "@/lib/api";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase";
+import { storage, db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, query, where, doc, updateDoc, increment } from "firebase/firestore";
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
@@ -153,7 +154,7 @@ export default function ReportPage() {
         imageUrl = await getDownloadURL(snapshot.ref);
       }
 
-      await createReport({
+      const reportId = await createReport({
         title: aiResult?.title || description.slice(0, 50),
         description,
         category: aiResult?.category || "other",
@@ -170,6 +171,24 @@ export default function ReportPage() {
         user_photo: user.photoURL || "",
         suggested_action: aiResult?.suggested_action || "",
       });
+
+      await updateDoc(doc(db, "users", user.uid), { reports_count: increment(1), points: increment(10) });
+
+      const nearbyUsers = await getDocs(query(collection(db, "users"), where("uid", "!=", user.uid)));
+      const batch = [];
+      for (const userDoc of nearbyUsers.docs) {
+        batch.push(addDoc(collection(db, "notifications"), {
+          user_id: userDoc.id,
+          type: "system",
+          title: "New Issue Nearby",
+          message: `${user.displayName || "A citizen"} reported a ${aiResult?.category_label || "civic"} issue: ${aiResult?.title || description.slice(0, 50)}`,
+          read: false,
+          report_id: reportId,
+          created_at: new Date().toISOString(),
+        }));
+      }
+      await Promise.all(batch);
+
       setSubmitted(true);
     } catch {
       setError("Failed to submit. Please try again.");

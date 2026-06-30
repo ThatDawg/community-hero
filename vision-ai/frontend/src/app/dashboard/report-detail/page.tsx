@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Clock, ThumbsUp, Send, CheckCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ThumbsUp, Send, CheckCircle, Share2, Languages } from "lucide-react";
 import { useAuth } from "@/lib/firebase-context";
 import { getReport, upvoteReport } from "@/lib/firestore";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, increment, setDoc, getDoc } from "firebase/firestore";
+
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
 interface Report {
   id: string;
@@ -28,8 +30,11 @@ interface Report {
   user_id: string;
   user_name: string;
   upvotes: number;
+  verified_by?: string;
   suggested_action?: string;
+  root_cause?: string;
   created_at: string;
+  resolved_at?: string;
 }
 
 interface Comment {
@@ -65,6 +70,9 @@ export default function ReportDetailPage() {
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [upvoted, setUpvoted] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const [translatedDesc, setTranslatedDesc] = useState("");
+  const [translating, setTranslating] = useState(false);
 
   useEffect(() => {
     if (!reportId) { setLoading(false); return; }
@@ -91,9 +99,37 @@ export default function ReportDetailPage() {
   };
 
   const handleVerify = async () => {
-    if (!report || !user || !reportId) return;
-    await updateDoc(doc(db, "reports", reportId), { status: "verified", verified_by: user.uid });
-    setReport({ ...report, status: "verified" });
+    if (!report || !user || !reportId || verified) return;
+    const verifyRef = doc(db, "reports", reportId, "verifications", user.uid);
+    await setDoc(verifyRef, {
+      user_id: user.uid,
+      user_name: user.displayName || "Anonymous",
+      created_at: new Date().toISOString(),
+    });
+
+    const verSnap = await getDoc(doc(db, "reports", reportId, "verifications", "count"));
+    const currentCount = verSnap.exists() ? (verSnap.data().count || 0) : 0;
+
+    await updateDoc(doc(db, "reports", reportId), {
+      verification_count: increment(1),
+    });
+
+    if (currentCount >= 2) {
+      await updateDoc(doc(db, "reports", reportId), { status: "verified" });
+      setReport({ ...report, status: "verified" });
+    }
+
+    setVerified(true);
+
+    await addDoc(collection(db, "notifications"), {
+      user_id: report.user_id,
+      type: "verification",
+      title: "Report Verified",
+      message: `${user.displayName || "A citizen"} verified your report: ${report.title}`,
+      read: false,
+      report_id: reportId,
+      created_at: new Date().toISOString(),
+    });
   };
 
   const handleComment = async () => {
@@ -104,7 +140,46 @@ export default function ReportDetailPage() {
       text: newComment,
       created_at: new Date().toISOString(),
     });
+
+    if (report && report.user_id !== user.uid) {
+      await addDoc(collection(db, "notifications"), {
+        user_id: report.user_id,
+        type: "comment",
+        title: "New Comment",
+        message: `${user.displayName || "Someone"} commented on your report: ${report.title}`,
+        read: false,
+        report_id: reportId,
+        created_at: new Date().toISOString(),
+      });
+    }
     setNewComment("");
+  };
+
+  const handleTranslate = async () => {
+    if (!report) return;
+    setTranslating(true);
+    try {
+      const response = await fetch(GEMINI_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Translate the following civic issue report to Hindi, Spanish, and French. Provide all three translations separated by "---":\n\nTitle: ${report.title}\nDescription: ${report.description}` }] }],
+        }),
+      });
+      const data = await response.json();
+      setTranslatedDesc(data.candidates?.[0]?.content?.parts?.[0]?.text || "Translation unavailable");
+    } catch {
+      setTranslatedDesc("Translation service unavailable");
+    }
+    setTranslating(false);
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: report?.title, text: report?.description, url: window.location.href });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+    }
   };
 
   if (loading) {
@@ -126,18 +201,35 @@ export default function ReportDetailPage() {
     );
   }
 
+  const timeSinceReport = report.created_at
+    ? Math.floor((Date.now() - new Date(report.created_at).getTime()) / 3600000)
+    : 0;
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <Button variant="ghost" onClick={() => router.back()}>
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back
-      </Button>
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" onClick={() => router.back()}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleShare}>
+            <Share2 className="h-4 w-4 mr-1" /> Share
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleTranslate} disabled={translating}>
+            <Languages className="h-4 w-4 mr-1" /> {translating ? "Translating..." : "Translate"}
+          </Button>
+        </div>
+      </div>
 
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-xl">{report.title}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">{report.user_name}</p>
+              <p className="text-sm text-muted-foreground mt-1">Reported by {report.user_name}</p>
+              {timeSinceReport > 0 && (
+                <p className="text-xs text-muted-foreground">Reported {timeSinceReport}h ago</p>
+              )}
             </div>
             <div className="flex gap-2">
               <Badge className={severityColors[report.severity]}>{report.severity?.toUpperCase()}</Badge>
@@ -147,11 +239,23 @@ export default function ReportDetailPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {report.image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={report.image_url} alt="Issue" className="w-full rounded-lg max-h-96 object-cover" />
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={report.image_url} alt="Issue" className="w-full rounded-lg max-h-96 object-cover" />
+              <div className="absolute top-2 right-2">
+                <Badge variant="secondary" className="bg-black/50 text-white border-0">YOLO Detection</Badge>
+              </div>
+            </div>
           )}
 
           <p className="text-muted-foreground">{report.description}</p>
+
+          {translatedDesc && (
+            <div className="rounded-lg bg-green-50 p-3 dark:bg-green-950 whitespace-pre-wrap">
+              <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">Translations</p>
+              <p className="text-sm text-green-700 dark:text-green-300">{translatedDesc}</p>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">{report.category_label || report.category}</Badge>
@@ -175,13 +279,20 @@ export default function ReportDetailPage() {
             </div>
           )}
 
-          <div className="flex gap-3">
+          {report.root_cause && (
+            <div className="rounded-lg bg-purple-50 p-3 dark:bg-purple-950">
+              <p className="text-sm font-medium text-purple-800 dark:text-purple-200">Root Cause Analysis</p>
+              <p className="text-sm text-purple-700 dark:text-purple-300">{report.root_cause}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 flex-wrap">
             <Button variant={upvoted ? "default" : "outline"} onClick={handleUpvote} disabled={upvoted}>
               <ThumbsUp className="mr-2 h-4 w-4" /> {report.upvotes || 0} Upvotes
             </Button>
             {user && user.uid !== report.user_id && report.status === "reported" && (
-              <Button variant="outline" onClick={handleVerify}>
-                <CheckCircle className="mr-2 h-4 w-4" /> Verify Issue
+              <Button variant={verified ? "default" : "outline"} onClick={handleVerify} disabled={verified}>
+                <CheckCircle className="mr-2 h-4 w-4" /> {verified ? "Verified" : "Verify Issue"}
               </Button>
             )}
           </div>

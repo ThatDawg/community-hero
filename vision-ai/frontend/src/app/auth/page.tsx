@@ -8,7 +8,8 @@ import {
   signInWithPopup,
   updateProfile,
 } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider, db } from "@/lib/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,20 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  const saveUserProfile = async (uid: string, displayName: string, email: string, photoURL?: string) => {
+    await setDoc(doc(db, "users", uid), {
+      uid,
+      displayName,
+      email,
+      photoURL: photoURL || "",
+      role: "citizen",
+      reports_count: 0,
+      verified_count: 0,
+      points: 0,
+      created_at: new Date().toISOString(),
+    }, { merge: true });
+  };
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -31,12 +46,14 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        await saveUserProfile(cred.user.uid, cred.user.displayName || name || "Citizen", email, cred.user.photoURL || undefined);
       } else {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         if (name) {
           await updateProfile(cred.user, { displayName: name });
         }
+        await saveUserProfile(cred.user.uid, name || "Citizen", email);
       }
       router.push("/dashboard");
     } catch (err: unknown) {
@@ -50,7 +67,8 @@ export default function AuthPage() {
     setLoading(true);
     setError("");
     try {
-      await signInWithPopup(auth, googleProvider);
+      const cred = await signInWithPopup(auth, googleProvider);
+      await saveUserProfile(cred.user.uid, cred.user.displayName || "Citizen", cred.user.email || "", cred.user.photoURL || undefined);
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed");

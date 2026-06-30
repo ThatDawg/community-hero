@@ -1,17 +1,36 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mic, Send, Bot, User, Loader2 } from "lucide-react";
+import { Mic, Send, Bot, User, Loader2, Globe, Languages } from "lucide-react";
 import { chatWithAI, transcribeVoice } from "@/lib/api";
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
 const SYSTEM_PROMPT = `You are Vision AI, a helpful assistant for a civic issue reporting platform.
 You help citizens report issues, check status, and provide information about local government services.
-Be helpful, concise, and friendly. If asked about a specific issue, provide relevant details.`;
+Be helpful, concise, and friendly. If asked about a specific issue, provide relevant details.
+If the user describes an issue, help them categorize it and suggest next steps.
+If information is missing (like location or description details), ask follow-up questions.
+When reporting, ask: What is the issue? Where is it? How severe is it? When did you notice it?
+You can respond in any language the user writes in.`;
+
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "hi", label: "Hindi" },
+  { code: "es", label: "Spanish" },
+  { code: "fr", label: "French" },
+  { code: "de", label: "German" },
+  { code: "ar", label: "Arabic" },
+  { code: "zh", label: "Chinese" },
+  { code: "ja", label: "Japanese" },
+  { code: "pt", label: "Portuguese" },
+  { code: "bn", label: "Bengali" },
+  { code: "ta", label: "Tamil" },
+  { code: "te", label: "Telugu" },
+];
 
 interface Message {
   id: string;
@@ -26,27 +45,41 @@ export default function ChatPage() {
       id: "1",
       role: "assistant",
       content:
-        "Hello! I'm Vision AI, your civic issue reporting assistant. I can help you:\n\n- Report a civic issue\n- Check the status of your reports\n- Get information about local services\n- Find nearby reported issues\n\nHow can I help you today?",
+        "Hello! I'm Vision AI, your civic issue reporting assistant. I can help you:\n\n- Report a civic issue (I'll ask follow-up questions to get all details)\n- Check the status of your reports\n- Get information about local services\n- Find nearby reported issues\n- Translate information to your language\n\nHow can I help you today?",
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [selectedLang, setSelectedLang] = useState("en");
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<unknown>(null);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   const callGemini = async (userMessage: string) => {
-    // Try backend first, fall back to client-side Gemini
+    const langName = LANGUAGES.find((l) => l.code === selectedLang)?.label || "English";
+    const langInstruction = selectedLang !== "en"
+      ? `\n\nIMPORTANT: The user's preferred language is ${langName}. Translate your entire response to ${langName}.`
+      : "";
+
     try {
-      const result = await chatWithAI(userMessage, SYSTEM_PROMPT);
+      const result = await chatWithAI(userMessage, SYSTEM_PROMPT + langInstruction);
       return result.response;
     } catch {
       const response = await fetch(GEMINI_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `${SYSTEM_PROMPT}\n\nUser: ${userMessage}` }] }],
+          contents: [{ parts: [{ text: `${SYSTEM_PROMPT}${langInstruction}\n\nUser: ${userMessage}` }] }],
         }),
       });
       const data = await response.json();
@@ -90,11 +123,54 @@ export default function ChatPage() {
     }
   };
 
+  const startVoiceInput = () => {
+    const SpeechRecognitionAPI = typeof window !== "undefined"
+      ? (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }).SpeechRecognition || (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }).webkitSpeechRecognition
+      : null;
+
+    if (!SpeechRecognitionAPI) {
+      startRecording();
+      return;
+    }
+
+    const recognition = new (SpeechRecognitionAPI as new () => unknown)() as Record<string, unknown>;
+    recognition.lang = selectedLang === "en" ? "en-US" : selectedLang;
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    (recognition as { onresult: (event: unknown) => void }).onresult = (event: unknown) => {
+      const e = event as { results: Array<Array<{ transcript: string }>> };
+      const transcript = Array.from(e.results)
+        .map((r) => r[0].transcript)
+        .join("");
+      setInput(transcript);
+    };
+
+    (recognition as { onend: () => void }).onend = () => {
+      setRecording(false);
+    };
+
+    (recognition as { onerror: () => void }).onerror = () => {
+      setRecording(false);
+      startRecording();
+    };
+
+    recognitionRef.current = recognition;
+    (recognition as { start: () => void }).start();
+    setRecording(true);
+  };
+
+  const stopVoiceInput = () => {
+    if (recognitionRef.current) {
+      (recognitionRef.current as { stop: () => void }).stop();
+    }
+    setRecording(false);
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
       const chunks: Blob[] = [];
 
       mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
@@ -126,20 +202,36 @@ export default function ChatPage() {
     }
   };
 
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    setRecording(false);
-  };
-
   return (
     <div className="flex flex-col h-screen p-6">
       <Card className="flex-1 flex flex-col overflow-hidden">
         <CardHeader className="border-b">
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5" />
-            AI Assistant
-            <span className="text-sm font-normal text-muted-foreground">powered by Gemini</span>
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5" />
+              AI Assistant
+              <span className="text-sm font-normal text-muted-foreground">powered by Gemini</span>
+            </CardTitle>
+            <div className="relative">
+              <Button variant="outline" size="sm" onClick={() => setShowLangMenu(!showLangMenu)}>
+                <Languages className="h-4 w-4 mr-1" />
+                {LANGUAGES.find((l) => l.code === selectedLang)?.label}
+              </Button>
+              {showLangMenu && (
+                <div className="absolute right-0 top-full mt-1 bg-card border rounded-lg shadow-lg z-50 py-1 max-h-60 overflow-auto w-40">
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.code}
+                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-accent ${selectedLang === lang.code ? "bg-primary/10" : ""}`}
+                      onClick={() => { setSelectedLang(lang.code); setShowLangMenu(false); }}
+                    >
+                      {lang.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto p-4 space-y-4">
           {messages.map((msg) => (
@@ -192,7 +284,8 @@ export default function ChatPage() {
             <Button
               variant={recording ? "destructive" : "outline"}
               size="icon"
-              onClick={recording ? stopRecording : startRecording}
+              onClick={recording ? stopVoiceInput : startVoiceInput}
+              title="Voice input (Web Speech API)"
             >
               <Mic className="h-4 w-4" />
             </Button>

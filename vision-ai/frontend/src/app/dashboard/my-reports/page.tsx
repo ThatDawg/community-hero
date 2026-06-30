@@ -23,6 +23,7 @@ interface Report {
   upvotes: number;
   user_id: string;
   created_at: string;
+  resolved_at?: string;
 }
 
 const getUpvoted = (): string[] => {
@@ -124,6 +125,11 @@ export default function MyReportsPage() {
                   <Badge variant="secondary">{report.category_label || report.category}</Badge>
                   <Badge className={severityColors[report.severity]}>{report.severity?.toUpperCase()}</Badge>
                   <Badge className={statusColors[report.status]}>{report.status?.replace("_", " ")}</Badge>
+                  {report.resolved_at && (
+                    <span className="text-xs text-green-600">
+                      Resolved {new Date(report.resolved_at).toLocaleDateString()}
+                    </span>
+                  )}
                   {report.address && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <MapPin className="h-3 w-3" />{report.address}

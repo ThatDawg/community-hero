@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell, LineChart, Line,
 } from "recharts";
-import { Shield, AlertTriangle, CheckCircle, Clock, TrendingUp } from "lucide-react";
+import { Shield, AlertTriangle, CheckCircle, Clock, TrendingUp, FileText, Download } from "lucide-react";
 import { getAllReports } from "@/lib/firestore";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
 interface Report {
   id: string;
@@ -26,6 +28,7 @@ interface Report {
   address?: string;
   user_name: string;
   created_at: string;
+  resolved_at?: string;
 }
 
 const COLORS = ["#f97316", "#eab308", "#3b82f6", "#06b6d4", "#22c55e", "#a855f7", "#ef4444", "#ec4899", "#6366f1"];
@@ -41,6 +44,7 @@ export default function GovernmentPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   useEffect(() => {
     getAllReports().then((data) => {
@@ -55,22 +59,15 @@ export default function GovernmentPage() {
   const inProgress = reports.filter((r) => r.status === "in_progress").length;
   const critical = reports.filter((r) => r.severity === "critical").length;
 
-  const byCategory = reports.reduce((acc, r) => {
-    const cat = r.category_label || r.category || "Other";
-    acc[cat] = (acc[cat] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const resolutionTimes = reports
+    .filter((r) => r.resolved_at && r.created_at)
+    .map((r) => (new Date(r.resolved_at!).getTime() - new Date(r.created_at).getTime()) / 3600000);
+  const avgResolution = resolutionTimes.length > 0 ? (resolutionTimes.reduce((a, b) => a + b, 0) / resolutionTimes.length).toFixed(1) : "N/A";
 
-  const byDepartment = reports.reduce((acc, r) => {
-    const dept = r.department || "Unassigned";
-    acc[dept] = (acc[dept] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const byCategory = reports.reduce((acc, r) => { const cat = r.category_label || r.category || "Other"; acc[cat] = (acc[cat] || 0) + 1; return acc; }, {} as Record<string, number>);
+  const byDepartment = reports.reduce((acc, r) => { const dept = r.department || "Unassigned"; acc[dept] = (acc[dept] || 0) + 1; return acc; }, {} as Record<string, number>);
 
-  const categoryData = Object.entries(byCategory).map(([name, value], i) => ({
-    name, value, color: COLORS[i % COLORS.length],
-  }));
-
+  const categoryData = Object.entries(byCategory).map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
   const departmentData = Object.entries(byDepartment).map(([name, value]) => ({
     name, pending: reports.filter((r) => (r.department || "Unassigned") === name && r.status !== "resolved").length,
     resolved: reports.filter((r) => (r.department || "Unassigned") === name && r.status === "resolved").length,
@@ -78,11 +75,53 @@ export default function GovernmentPage() {
 
   const filteredReports = statusFilter === "all" ? reports : reports.filter((r) => r.status === statusFilter);
 
+  const generateOfficialReport = async () => {
+    setGeneratingReport(true);
+    const summary = `Vision AI Official Report
+Generated: ${new Date().toLocaleString()}
+========================================
+Total Reports: ${total}
+Resolved: ${resolved} (${total > 0 ? Math.round((resolved / total) * 100) : 0}%)
+In Progress: ${inProgress}
+Pending: ${pending}
+Critical: ${critical}
+Avg Resolution Time: ${avgResolution} hours
+
+By Department:
+${Object.entries(byDepartment).map(([dept, count]) => `  ${dept}: ${count} reports`).join("\n")}
+
+By Category:
+${Object.entries(byCategory).map(([cat, count]) => `  ${cat}: ${count} reports`).join("\n")}
+
+Recent Reports (Top 10):
+${reports.slice(0, 10).map((r, i) => `${i + 1}. [${r.severity.toUpperCase()}] ${r.title || r.description?.slice(0, 50)} - ${r.status} (${r.department || "Unassigned"})`).join("\n")}
+`;
+
+    const blob = new Blob([summary], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vision-ai-report-${new Date().toISOString().split("T")[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setGeneratingReport(false);
+  };
+
+  const updateStatus = async (reportId: string, newStatus: string) => {
+    const updateData: Record<string, string> = { status: newStatus };
+    if (newStatus === "resolved") {
+      updateData.resolved_at = new Date().toISOString();
+    }
+    await updateDoc(doc(db, "reports", reportId), updateData);
+    setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, ...updateData } : r));
+  };
+
   const stats = [
     { title: "Total Reports", value: total, icon: AlertTriangle, color: "text-blue-500" },
     { title: "Resolved", value: resolved, icon: CheckCircle, color: "text-green-500" },
     { title: "In Progress", value: inProgress, icon: Clock, color: "text-yellow-500" },
     { title: "Critical", value: critical, icon: TrendingUp, color: "text-red-500" },
+    { title: "Avg Resolution", value: avgResolution === "N/A" ? "N/A" : `${avgResolution}h`, icon: Clock, color: "text-purple-500" },
   ];
 
   if (loading) {
@@ -95,15 +134,21 @@ export default function GovernmentPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="h-6 w-6 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Government Dashboard</h1>
-          <p className="text-muted-foreground">Manage and resolve civic issues</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Shield className="h-6 w-6 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Government Dashboard</h1>
+            <p className="text-muted-foreground">Manage and resolve civic issues</p>
+          </div>
         </div>
+        <Button onClick={generateOfficialReport} disabled={generatingReport}>
+          <Download className="mr-2 h-4 w-4" />
+          {generatingReport ? "Generating..." : "Export Report"}
+        </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {stats.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -127,15 +172,10 @@ export default function GovernmentPage() {
         <TabsContent value="reports" className="space-y-4">
           <div className="flex gap-2">
             {["all", "reported", "verified", "in_progress", "resolved"].map((f) => (
-              <button
-                key={f}
-                onClick={() => setStatusFilter(f)}
+              <button key={f} onClick={() => setStatusFilter(f)}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  statusFilter === f
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                }`}
-              >
+                  statusFilter === f ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"
+                }`}>
                 {f === "all" ? "All" : f.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
               </button>
             ))}
@@ -160,25 +200,16 @@ export default function GovernmentPage() {
                           {report.department && <Badge variant="outline">{report.department}</Badge>}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Reported by {report.user_name} • {report.created_at ? new Date(report.created_at).toLocaleDateString() : ""}
+                          By {report.user_name} {report.created_at ? `• ${new Date(report.created_at).toLocaleDateString()}` : ""}
+                          {report.resolved_at ? ` • Resolved ${new Date(report.resolved_at).toLocaleDateString()}` : ""}
                         </p>
                       </div>
                       <div className="flex gap-2">
                         {report.status === "reported" && (
-                          <Button size="sm" variant="outline" onClick={async () => {
-                            const { updateDoc, doc } = await import("firebase/firestore");
-                            const { db } = await import("@/lib/firebase");
-                            await updateDoc(doc(db, "reports", report.id), { status: "in_progress" });
-                            setReports((prev) => prev.map((r) => r.id === report.id ? { ...r, status: "in_progress" } : r));
-                          }}>Start</Button>
+                          <Button size="sm" variant="outline" onClick={() => updateStatus(report.id, "in_progress")}>Start</Button>
                         )}
                         {report.status === "in_progress" && (
-                          <Button size="sm" onClick={async () => {
-                            const { updateDoc, doc } = await import("firebase/firestore");
-                            const { db } = await import("@/lib/firebase");
-                            await updateDoc(doc(db, "reports", report.id), { status: "resolved" });
-                            setReports((prev) => prev.map((r) => r.id === report.id ? { ...r, status: "resolved" } : r));
-                          }}>Resolve</Button>
+                          <Button size="sm" onClick={() => updateStatus(report.id, "resolved")}>Resolve</Button>
                         )}
                       </div>
                     </div>
@@ -230,9 +261,7 @@ export default function GovernmentPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {departmentData.map((dept) => (
               <Card key={dept.name}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{dept.name}</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-lg">{dept.name}</CardTitle></CardHeader>
                 <CardContent>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Pending: {dept.pending}</span>

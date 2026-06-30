@@ -4,9 +4,11 @@ import { useAuth } from "@/lib/firebase-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { requestNotificationPermission, onForegroundMessage } from "@/lib/notifications";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -35,6 +37,11 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!loading && !user) {
       router.push("/auth");
+    }
+    if (user) {
+      requestNotificationPermission(user.uid);
+      const unsub = onForegroundMessage(() => {});
+      return unsub;
     }
   }, [user, loading, router]);
 
@@ -147,7 +154,16 @@ export default function DashboardLayout({
           </button>
           <h1 className="text-lg font-bold">Vision AI</h1>
         </header>
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="h-full"
+          >
+            {children}
+          </motion.div>
+        </main>
       </div>
     </div>
   );
