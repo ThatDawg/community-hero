@@ -5,10 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Camera, MapPin, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import { Camera, MapPin, Loader2, CheckCircle, AlertTriangle, Upload } from "lucide-react";
 import { useAuth } from "@/lib/firebase-context";
 import { useRouter } from "next/navigation";
 import { createReport } from "@/lib/firestore";
+import { analyzeReport, type AnalyzeResponse } from "@/lib/api";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
@@ -45,6 +48,7 @@ export default function ReportPage() {
   const [address, setAddress] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState<AIResult | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -53,6 +57,8 @@ export default function ReportPage() {
     const file = e.target.files?.[0];
     if (file) {
       setImage(file);
+      setAiResult(null);
+      setDuplicateWarning(null);
       const reader = new FileReader();
       reader.onload = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -78,6 +84,33 @@ export default function ReportPage() {
     if (!description.trim()) return;
     setAnalyzing(true);
     setError("");
+    setDuplicateWarning(null);
+
+    // Try backend first (YOLO + Gemini), fall back to client-side Gemini
+    if (image) {
+      try {
+        const result = await analyzeReport(image, description, location || { lat: 28.6139, lng: 77.209 });
+        const analysis = result.geminiAnalysis;
+        setAiResult({
+          category: result.yoloResults.length > 0 ? result.yoloResults[0].category : "other",
+          category_label: result.yoloResults.length > 0 ? result.yoloResults[0].category.replace("_", " ") : "General Issue",
+          severity: analysis.priority?.toLowerCase() || "medium",
+          department: analysis.department || "General Administration",
+          title: analysis.title || description.slice(0, 50),
+          summary: analysis.citizenSummary || analysis.description || description,
+          suggested_action: analysis.suggestedAction || "Inspection required",
+        });
+        if (result.duplicateFound) {
+          setDuplicateWarning(`Similar report found (ID: ${result.duplicateReportId}). You may want to upvote the existing report instead.`);
+        }
+        setAnalyzing(false);
+        return;
+      } catch {
+        // Backend unavailable, fall through to client-side Gemini
+      }
+    }
+
+    // Fallback: client-side Gemini text-only
     try {
       const response = await fetch(GEMINI_API_URL, {
         method: "POST",
@@ -115,7 +148,9 @@ export default function ReportPage() {
     try {
       let imageUrl = null;
       if (image) {
-        imageUrl = imagePreview;
+        const imageRef = ref(storage, `reports/${user.uid}/${Date.now()}_${image.name}`);
+        const snapshot = await uploadBytes(imageRef, image);
+        imageUrl = await getDownloadURL(snapshot.ref);
       }
 
       await createReport({
@@ -174,7 +209,7 @@ export default function ReportPage() {
         <Card>
           <CardHeader>
             <CardTitle>Image (Optional)</CardTitle>
-            <CardDescription>Upload a photo of the issue</CardDescription>
+            <CardDescription>Upload a photo — YOLO will detect the issue type</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div
@@ -220,7 +255,7 @@ export default function ReportPage() {
                 placeholder="e.g., Large pothole on Main Street near the school gate..."
                 rows={5}
                 value={description}
-                onChange={(e) => { setDescription(e.target.value); setAiResult(null); }}
+                onChange={(e) => { setDescription(e.target.value); setAiResult(null); setDuplicateWarning(null); }}
               />
             </div>
 
@@ -231,11 +266,19 @@ export default function ReportPage() {
               disabled={!description.trim() || analyzing}
             >
               {analyzing ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing with AI...</>
               ) : (
                 <><AlertTriangle className="mr-2 h-4 w-4" />AI Categorize</>
               )}
             </Button>
+
+            {duplicateWarning && (
+              <div className="rounded-lg bg-yellow-50 p-4 dark:bg-yellow-950">
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  {duplicateWarning}
+                </p>
+              </div>
+            )}
 
             {aiResult && (
               <div className="rounded-lg bg-blue-50 p-4 space-y-2 dark:bg-blue-950">
@@ -248,6 +291,11 @@ export default function ReportPage() {
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   Route to: <span className="font-bold">{aiResult.department}</span>
                 </p>
+                {aiResult.summary && (
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Summary: <span className="font-bold">{aiResult.summary}</span>
+                  </p>
+                )}
                 {aiResult.suggested_action && (
                   <p className="text-sm text-blue-700 dark:text-blue-300">
                     Action: <span className="font-bold">{aiResult.suggested_action}</span>
@@ -264,7 +312,7 @@ export default function ReportPage() {
               disabled={!description.trim() || !location || submitting}
             >
               {submitting ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
+                <><Upload className="mr-2 h-4 w-4 animate-spin" />Uploading & Submitting...</>
               ) : "Submit Report"}
             </Button>
           </CardContent>

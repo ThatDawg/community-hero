@@ -26,12 +26,14 @@ export interface AnalyzeResponse {
 }
 
 export async function analyzeReport(
-  imageFile: File,
+  imageFile: File | null,
   description: string,
   location: { lat: number; lng: number }
 ): Promise<AnalyzeResponse> {
   const formData = new FormData();
-  formData.append("image", imageFile);
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
   formData.append("description", description);
   formData.append("lat", location.lat.toString());
   formData.append("lng", location.lng.toString());

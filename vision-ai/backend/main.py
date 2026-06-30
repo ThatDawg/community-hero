@@ -39,16 +39,19 @@ async def health():
 
 @app.post("/api/analyze", response_model=AnalyzeResponse)
 async def analyze_report(
-    image: UploadFile = File(...),
     description: str = Form(...),
     lat: str = Form(...),
     lng: str = Form(...),
+    image: UploadFile = File(None),
 ):
     try:
-        image_bytes = await image.read()
-        pil_image = Image.open(io.BytesIO(image_bytes))
+        pil_image = None
+        yolo_results = []
 
-        yolo_results = detect_issues(pil_image)
+        if image:
+            image_bytes = await image.read()
+            pil_image = Image.open(io.BytesIO(image_bytes))
+            yolo_results = detect_issues(pil_image)
 
         location = f"Latitude: {lat}, Longitude: {lng}"
         gemini_result = analyze_with_gemini(pil_image, yolo_results, description, location)

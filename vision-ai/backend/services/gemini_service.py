@@ -9,14 +9,14 @@ model = genai.GenerativeModel("gemini-2.5-flash")
 
 
 def analyze_with_gemini(
-    image: Image.Image,
+    image: Optional[Image.Image],
     detections: List[Dict],
     description: str,
     location: str,
 ) -> Dict:
     detection_text = "\n".join(
         [f"- {d['category']} (confidence: {d['confidence']}, severity: {d['severity']})" for d in detections]
-    )
+    ) if detections else "No image detection results available."
 
     prompt = f"""You are an AI assistant for a civic issue reporting system. Analyze the following report and provide structured output.
 
@@ -40,7 +40,11 @@ Provide a JSON response with these fields:
 
 Respond ONLY with valid JSON."""
 
-    response = model.generate_content([prompt, image])
+    content = [prompt]
+    if image:
+        content.append(image)
+
+    response = model.generate_content(content)
     text = response.text.strip()
     if text.startswith("```"):
         text = text[7:-3]

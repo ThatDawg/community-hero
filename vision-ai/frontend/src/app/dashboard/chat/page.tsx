@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mic, Send, Bot, User, Loader2 } from "lucide-react";
+import { chatWithAI, transcribeVoice } from "@/lib/api";
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
@@ -36,15 +37,21 @@ export default function ChatPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   const callGemini = async (userMessage: string) => {
-    const response = await fetch(GEMINI_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${SYSTEM_PROMPT}\n\nUser: ${userMessage}` }] }],
-      }),
-    });
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
+    // Try backend first, fall back to client-side Gemini
+    try {
+      const result = await chatWithAI(userMessage, SYSTEM_PROMPT);
+      return result.response;
+    } catch {
+      const response = await fetch(GEMINI_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${SYSTEM_PROMPT}\n\nUser: ${userMessage}` }] }],
+        }),
+      });
+      const data = await response.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
+    }
   };
 
   const handleSend = async () => {
@@ -97,16 +104,9 @@ export default function ChatPage() {
 
         try {
           const audioBlob = new Blob(chunks, { type: "audio/webm" });
-          const formData = new FormData();
-          formData.append("audio", audioBlob, "recording.webm");
-
-          const res = await fetch("http://localhost:8000/api/voice", {
-            method: "POST",
-            body: formData,
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setInput(data.text);
+          const result = await transcribeVoice(audioBlob);
+          if (result.text) {
+            setInput(result.text);
           }
         } catch {
           console.error("Voice transcription unavailable");
