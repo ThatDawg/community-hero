@@ -6,7 +6,6 @@ import {
   updateDoc,
   doc,
   increment,
-  orderBy,
   query,
   where,
   getDoc,
@@ -48,19 +47,30 @@ export async function createReport(data: ReportData) {
 }
 
 export async function getAllReports() {
-  const q = query(collection(db, REPORTS_COLLECTION), orderBy("created_at", "desc"));
+  const q = query(collection(db, REPORTS_COLLECTION));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ReportData & { id: string }));
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() } as ReportData & { id: string }))
+    .sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return bTime - aTime;
+    });
 }
 
 export async function getUserReports(userId: string) {
   const q = query(
     collection(db, REPORTS_COLLECTION),
-    where("user_id", "==", userId),
-    orderBy("created_at", "desc")
+    where("user_id", "==", userId)
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ReportData & { id: string }));
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() } as ReportData & { id: string }))
+    .sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return bTime - aTime;
+    });
 }
 
 export async function getReport(reportId: string) {

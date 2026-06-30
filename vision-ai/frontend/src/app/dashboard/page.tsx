@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/firebase-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
@@ -12,15 +13,54 @@ import {
   Clock,
   TrendingUp,
 } from "lucide-react";
+import { getUserReports, getAllReports } from "@/lib/firestore";
+
+const statusColors: Record<string, string> = {
+  reported: "bg-blue-100 text-blue-700",
+  verified: "bg-purple-100 text-purple-700",
+  in_progress: "bg-yellow-100 text-yellow-700",
+  resolved: "bg-green-100 text-green-700",
+  rejected: "bg-red-100 text-red-700",
+};
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [myReports, setMyReports] = useState<number>(0);
+  const [myResolved, setMyResolved] = useState<number>(0);
+  const [myPending, setMyPending] = useState<number>(0);
+  const [recentReports, setRecentReports] = useState<{ title: string; status: string; time: string }[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    getUserReports(user.uid).then((reports) => {
+      setMyReports(reports.length);
+      setMyResolved(reports.filter((r) => r.status === "resolved").length);
+      setMyPending(reports.filter((r) => r.status !== "resolved").length);
+    }).catch(() => {});
+    getAllReports().then((all) => {
+      const sorted = all.slice(0, 5).map((r) => ({
+        title: r.title || r.description?.slice(0, 40) || "Untitled",
+        status: r.status || "reported",
+        time: r.created_at ? timeAgo(r.created_at) : "just now",
+      }));
+      setRecentReports(sorted);
+    }).catch(() => {});
+  }, [user]);
 
   const stats = [
-    { title: "My Reports", value: "12", icon: AlertTriangle, change: "+3 this week" },
-    { title: "Resolved", value: "8", icon: CheckCircle, change: "67% rate" },
-    { title: "Pending", value: "4", icon: Clock, change: "Avg 2 days" },
-    { title: "Reputation", value: "850", icon: TrendingUp, change: "+50 points" },
+    { title: "My Reports", value: String(myReports), icon: AlertTriangle, change: "Total submitted" },
+    { title: "Resolved", value: String(myResolved), icon: CheckCircle, change: myReports ? `${Math.round((myResolved / myReports) * 100)}% rate` : "0% rate" },
+    { title: "Pending", value: String(myPending), icon: Clock, change: "Awaiting resolution" },
+    { title: "Total Issues", value: String(myReports), icon: TrendingUp, change: "Community reports" },
   ];
 
   const quickActions = [
@@ -99,11 +139,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              { title: "Pothole on Main St", status: "verified", time: "2 hours ago" },
-              { title: "Garbage overflow on Oak Ave", status: "pending", time: "5 hours ago" },
-              { title: "Broken streetlight on Pine Rd", status: "in_progress", time: "1 day ago" },
-            ].map((item, i) => (
+            {recentReports.length > 0 ? recentReports.map((item, i) => (
               <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0">
                 <div>
                   <p className="font-medium">{item.title}</p>
@@ -111,17 +147,15 @@ export default function DashboardPage() {
                 </div>
                 <span
                   className={`rounded-full px-2 py-1 text-xs font-medium ${
-                    item.status === "verified"
-                      ? "bg-green-100 text-green-700"
-                      : item.status === "pending"
-                      ? "bg-yellow-100 text-yellow-700"
-                      : "bg-blue-100 text-blue-700"
+                    statusColors[item.status] || "bg-gray-100 text-gray-700"
                   }`}
                 >
-                  {item.status}
+                  {item.status.replace("_", " ")}
                 </span>
               </div>
-            ))}
+            )) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No reports yet. Be the first to report an issue!</p>
+            )}
           </div>
         </CardContent>
       </Card>
