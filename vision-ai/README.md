@@ -1,4 +1,6 @@
-# CivicPulse AI - Vision AI Platform
+# Vision AI
+
+> AI-powered platform for citizens to report, track, and resolve community issues through collaboration, data, and intelligent automation.
 
 ## Project Structure
 
@@ -19,7 +21,6 @@ vision-ai/
 │   │   │   │   └── leaderboard/    # Gamification
 │   │   ├── components/    # Reusable components
 │   │   └── lib/           # Utilities and services
-│   └── .env.local         # Environment variables
 ├── backend/               # FastAPI backend
 │   ├── main.py           # API entry point
 │   ├── models/           # Pydantic schemas
@@ -34,7 +35,7 @@ vision-ai/
 ```bash
 cd frontend
 npm install
-cp .env.local.example .env.local  # Add your Firebase config
+# Create .env.local with your Firebase config
 npm run dev
 ```
 
@@ -42,36 +43,24 @@ npm run dev
 ```bash
 cd backend
 pip install -r requirements.txt
-cp .env.example .env  # Add your API keys
+# Create .env with your API keys
 python main.py
 ```
 
-### Environment Variables
-
-**Frontend (.env.local)**
-- NEXT_PUBLIC_FIREBASE_API_KEY
-- NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-- NEXT_PUBLIC_FIREBASE_PROJECT_ID
-- NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-- NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-- NEXT_PUBLIC_FIREBASE_APP_ID
-- NEXT_PUBLIC_FASTAPI_URL=http://localhost:8000
-
-**Backend (.env)**
-- GOOGLE_API_KEY (from Google AI Studio)
-- FIREBASE_CREDENTIALS_PATH
-- FIREBASE_STORAGE_BUCKET
-- YOLO_MODEL_PATH
-
-## AI Stack
-- **YOLO**: Image detection for potholes, garbage, etc.
-- **Gemini 2.5 Flash**: Issue analysis, categorization, chatbot
-- **Firebase**: Auth, Firestore, Storage, Cloud Messaging
+## Tech Stack
+- **Frontend:** Next.js 15, React, TypeScript, Tailwind CSS, Shadcn UI, Framer Motion
+- **Backend:** FastAPI (Python)
+- **AI:** Gemini 2.5 Flash, YOLO
+- **Database:** Firebase Firestore
+- **Auth:** Firebase Authentication (Google + Email)
+- **Storage:** Firebase Storage
+- **Maps:** Leaflet + OpenStreetMap
+- **Notifications:** Firebase Cloud Messaging
 
 ## Google Technologies Used
-- Gemini API
+- Gemini API (issue categorization, chatbot, analysis)
 - Firebase Authentication
 - Firebase Firestore
 - Firebase Storage
 - Firebase Cloud Messaging
-- Google Cloud Run (deployment)
+- Google Cloud Run

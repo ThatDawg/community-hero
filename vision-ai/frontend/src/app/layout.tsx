@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CivicPulse AI - Vision AI Platform",
+  title: "Vision AI - Civic Issue Reporting Platform",
   description: "AI-powered civic issue reporting and resolution platform",
 };
 

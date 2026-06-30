@@ -8,7 +8,7 @@ import { Mic, Send, Bot, User, Loader2 } from "lucide-react";
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
-const SYSTEM_PROMPT = `You are CivicPulse AI, a helpful assistant for a civic issue reporting platform.
+const SYSTEM_PROMPT = `You are Vision AI, a helpful assistant for a civic issue reporting platform.
 You help citizens report issues, check status, and provide information about local government services.
 Be helpful, concise, and friendly. If asked about a specific issue, provide relevant details.`;
 
@@ -25,7 +25,7 @@ export default function ChatPage() {
       id: "1",
       role: "assistant",
       content:
-        "Hello! I'm CivicPulse AI, your civic issue reporting assistant. I can help you:\n\n- Report a civic issue\n- Check the status of your reports\n- Get information about local services\n- Find nearby reported issues\n\nHow can I help you today?",
+        "Hello! I'm Vision AI, your civic issue reporting assistant. I can help you:\n\n- Report a civic issue\n- Check the status of your reports\n- Get information about local services\n- Find nearby reported issues\n\nHow can I help you today?",
       timestamp: new Date(),
     },
   ]);

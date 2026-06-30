@@ -12,7 +12,7 @@ import { createReport } from "@/lib/firestore";
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
-const SYSTEM_PROMPT = `You are CivicPulse AI, an AI assistant for reporting civic issues. When a user describes an issue, respond with ONLY a JSON object:
+const SYSTEM_PROMPT = `You are Vision AI, an AI assistant for reporting civic issues. When a user describes an issue, respond with ONLY a JSON object:
 {
   "category": "pothole|water_leak|streetlight|waste|flooding|tree|road_crack|other",
   "category_label": "Human-readable category name",

@@ -61,7 +61,7 @@ Respond ONLY with valid JSON."""
 
 
 def chat_with_gemini(message: str, context: Optional[str] = None) -> str:
-    system_prompt = """You are CivicPulse AI, a helpful assistant for a civic issue reporting platform.
+    system_prompt = """You are Vision AI, a helpful assistant for a civic issue reporting platform.
 You help citizens report issues, check status, and provide information about local government services.
 Be helpful, concise, and friendly. If asked about a specific issue, provide relevant details."""
 

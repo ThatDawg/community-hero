@@ -59,7 +59,7 @@ export default function DashboardLayout({
       <aside className="hidden w-64 border-r bg-card lg:block">
         <div className="flex h-full flex-col">
           <div className="border-b p-4">
-            <h1 className="text-xl font-bold">CivicPulse AI</h1>
+            <h1 className="text-xl font-bold">Vision AI</h1>
             <p className="text-xs text-muted-foreground">Vision AI Platform</p>
           </div>
 

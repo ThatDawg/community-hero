@@ -8,3 +8,7 @@ __pycache__/
 .yarn/
 .vercel
 *.tsbuildinfo
+*.zip
+*.log
+DEPLOY.txt
+DEPLOY_COMMANDS.txt

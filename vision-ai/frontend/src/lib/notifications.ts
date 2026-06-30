@@ -23,7 +23,7 @@ export function onForegroundMessage(callback: (payload: MessagePayload) => void)
 
   return onMessage(messaging, (payload) => {
     callback(payload);
-    new Notification(payload.notification?.title || "CivicPulse", {
+    new Notification(payload.notification?.title || "Vision AI", {
       body: payload.notification?.body,
       icon: "/icon.png",
     });

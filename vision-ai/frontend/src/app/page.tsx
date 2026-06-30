@@ -62,7 +62,7 @@ export default function Home() {
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
-              CivicPulse <span className="text-blue-200">AI</span>
+              Vision <span className="text-blue-200">AI</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-blue-100">
               AI-powered civic issue detection, reporting, and resolution platform.
@@ -181,7 +181,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t bg-muted/50 py-8">
         <div className="mx-auto max-w-7xl px-4 text-center text-sm text-muted-foreground">
-          <p>Built for Hackathon | CivicPulse AI - Making Cities Smarter</p>
+          <p>Built for Hackathon | Vision AI - Making Cities Smarter</p>
         </div>
       </footer>
     </div>
