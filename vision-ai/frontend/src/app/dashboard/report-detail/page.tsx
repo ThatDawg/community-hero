@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/firebase-context";
 import { getReport, upvoteReport, softDeleteReport, updateReport } from "@/lib/firestore";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, increment, setDoc, getDoc } from "firebase/firestore";
+import { toast } from "sonner";
 
 const LeafletMap = dynamic(() => import("@/components/leaflet-map"), { ssr: false });
 
@@ -121,6 +122,7 @@ export default function ReportDetailPage() {
     await upvoteReport(reportId);
     setUpvoted(true);
     setReport({ ...report, upvotes: (report.upvotes || 0) + 1 });
+    toast.success("Upvoted! This helps bring attention to the issue.");
   };
 
   const handleVerify = async () => {
@@ -131,12 +133,15 @@ export default function ReportDetailPage() {
       user_name: user.displayName || "Anonymous",
       created_at: new Date().toISOString(),
     });
-    const verSnap = await getDoc(doc(db, "reports", reportId, "verifications", "count"));
-    const currentCount = verSnap.exists() ? (verSnap.data().count || 0) : 0;
     await updateDoc(doc(db, "reports", reportId), { verification_count: increment(1) });
-    if (currentCount >= 2) {
+    const reportSnap = await getDoc(doc(db, "reports", reportId));
+    const currentCount = reportSnap.data()?.verification_count || 0;
+    if (currentCount >= 3) {
       await updateDoc(doc(db, "reports", reportId), { status: "verified" });
       setReport({ ...report, status: "verified" });
+      toast.success("Report verified! (3+ verifications reached)");
+    } else {
+      toast.success("Thanks for verifying! Needs 3 verifications total.");
     }
     setVerified(true);
     await addDoc(collection(db, "notifications"), {
@@ -170,6 +175,7 @@ export default function ReportDetailPage() {
       });
     }
     setNewComment("");
+    toast.success("Comment added");
   };
 
   const handleTranslate = async () => {
@@ -232,8 +238,10 @@ export default function ReportDetailPage() {
       await softDeleteReport(reportId);
       setShowDeleteConfirm(false);
       router.push("/dashboard/my-reports");
+      toast.success("Report deleted");
     } catch {
       setShowDeleteConfirm(false);
+      toast.error("Failed to delete report");
     }
   };
 
@@ -259,8 +267,10 @@ export default function ReportDetailPage() {
       });
       setReport({ ...report, title: editTitle.trim(), description: editDescription.trim() } as Report);
       setEditing(false);
+      toast.success("Report updated");
     } catch (err) {
       console.error("Edit failed:", err);
+      toast.error("Failed to update report");
     }
     setSaving(false);
   };
@@ -408,7 +418,7 @@ export default function ReportDetailPage() {
                 <MapPin className="h-4 w-4" /> {report.address}
               </div>
             )}
-            {report.latitude && report.longitude && (
+            {report.latitude != null && report.longitude != null && (
               <div className="rounded-lg overflow-hidden border space-y-2">
                 <div className="h-[200px] w-full">
                   <LeafletMap

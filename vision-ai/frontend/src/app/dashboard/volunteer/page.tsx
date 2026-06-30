@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/firebase-context";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc, increment } from "firebase/firestore";
 import { HandHelping, MapPin, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 
 interface Report {
   id: string;
@@ -17,6 +18,7 @@ interface Report {
   severity: string;
   status: string;
   department?: string;
+  assigned_volunteer?: string;
   latitude: number;
   longitude: number;
   address?: string;
@@ -43,38 +45,50 @@ export default function VolunteerPage() {
       setLoading(false);
     });
 
-    const availableQ = query(
+    const allAvailable = query(
       collection(db, "reports"),
       where("status", "in", ["reported", "verified"]),
-      where("assigned_volunteer", "==", ""),
     );
-    const availableUnsub = onSnapshot(availableQ, (snap) => {
-      setAvailableReports(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Report)));
+    const availableUnsub = onSnapshot(allAvailable, (snap) => {
+      const unassigned = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as Report))
+        .filter((r) => !r.assigned_volunteer || r.assigned_volunteer === "");
+      setAvailableReports(unassigned);
     });
 
     getDoc(doc(db, "users", user.uid)).then((snap) => {
       if (snap.exists()) {
         setSpecialties(snap.data().specialties || []);
       }
-    });
+    }).catch(() => {});
 
     return () => { assignedUnsub(); availableUnsub(); };
   }, [user]);
 
   const handleClaim = async (reportId: string) => {
     if (!user) return;
-    await updateDoc(doc(db, "reports", reportId), {
-      assigned_volunteer: user.uid,
-      status: "in_progress",
-    });
-    await setDoc(doc(db, "users", user.uid), { reports_verified: increment(1) }, { merge: true });
+    try {
+      await updateDoc(doc(db, "reports", reportId), {
+        assigned_volunteer: user.uid,
+        status: "in_progress",
+      });
+      await setDoc(doc(db, "users", user.uid), { reports_verified: increment(1) }, { merge: true });
+      toast.success("Issue claimed! Head to the location.");
+    } catch (e) {
+      toast.error("Action failed", { description: e instanceof Error ? e.message : "Unknown error" });
+    }
   };
 
   const handleResolve = async (reportId: string) => {
-    await updateDoc(doc(db, "reports", reportId), {
-      status: "resolved",
-      resolved_at: new Date().toISOString(),
-    });
+    try {
+      await updateDoc(doc(db, "reports", reportId), {
+        status: "resolved",
+        resolved_at: new Date().toISOString(),
+      });
+      toast.success("Issue resolved! Thanks for your help.");
+    } catch (e) {
+      toast.error("Action failed", { description: e instanceof Error ? e.message : "Unknown error" });
+    }
   };
 
   const statusColors: Record<string, string> = {

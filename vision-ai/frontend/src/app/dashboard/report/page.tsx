@@ -8,12 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Camera, MapPin, Loader2, CheckCircle, AlertTriangle, Upload, Navigation } from "lucide-react";
 import { useAuth } from "@/lib/firebase-context";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createReport } from "@/lib/firestore";
-import { analyzeReport, type AnalyzeResponse } from "@/lib/api";
+import { analyzeReport } from "@/lib/api";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, db } from "@/lib/firebase";
-import { collection, addDoc, doc, updateDoc, increment, setDoc, getDoc } from "firebase/firestore";
+import { doc, updateDoc, increment, setDoc, getDoc } from "firebase/firestore";
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
@@ -120,11 +121,14 @@ export default function ReportPage() {
         });
         if (result.duplicateFound) {
           setDuplicateWarning(`Similar report found (ID: ${result.duplicateReportId}). You may want to upvote the existing report instead.`);
+          toast.warning("Possible duplicate detected");
+        } else {
+          toast.success("AI analysis complete");
         }
         setAnalyzing(false);
         return;
       } catch {
-        // Backend unavailable, fall through to client-side Gemini
+        toast.info("Backend unavailable, using client-side AI");
       }
     }
 
@@ -196,7 +200,7 @@ export default function ReportPage() {
       } else {
         await setDoc(userRef, {
           uid: user.uid,
-          name: user.displayName || "Anonymous",
+          displayName: user.displayName || "Anonymous",
           email: user.email || "",
           role: "citizen",
           reports_count: 1,
@@ -206,10 +210,14 @@ export default function ReportPage() {
       }
 
       setSubmitted(true);
+      toast.success("Report submitted successfully!", {
+        description: `Issue: ${aiResult?.title || description.slice(0, 40)}`,
+      });
     } catch (err: unknown) {
       console.error("Submit error:", err);
       const msg = err instanceof Error ? err.message : "Failed to submit. Please try again.";
       setError(msg);
+      toast.error("Submission failed", { description: msg });
     }
     setSubmitting(false);
   };

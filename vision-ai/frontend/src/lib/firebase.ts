@@ -22,5 +22,9 @@ export const storage = getStorage(app);
 export let messaging: ReturnType<typeof getMessaging> | null = null;
 
 if (typeof window !== "undefined") {
-  messaging = getMessaging(app);
+  try {
+    messaging = getMessaging(app);
+  } catch {
+    // FCM not configured — push notifications unavailable
+  }
 }

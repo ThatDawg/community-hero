@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line,
 } from "recharts";
-import { TrendingUp, AlertTriangle, CheckCircle, Clock, Brain } from "lucide-react";
+import { TrendingUp, AlertTriangle, CheckCircle, Clock, Brain, Trophy } from "lucide-react";
 import { getAllReports } from "@/lib/firestore";
 
 const COLORS = ["#f97316", "#eab308", "#3b82f6", "#06b6d4", "#22c55e", "#a855f7", "#ef4444", "#ec4899", "#6366f1"];
@@ -20,6 +20,8 @@ interface Report {
   department?: string;
   created_at: string;
   resolved_at?: string;
+  user_id?: string;
+  user_name?: string;
 }
 
 export default function AnalyticsPage() {
@@ -84,20 +86,23 @@ Respond with ONLY a JSON array of 3 insight strings, e.g. ["insight 1", "insight
   const byDepartment = reports.reduce((acc, r) => { const d = r.department || "Unassigned"; acc[d] = (acc[d] || 0) + 1; return acc; }, {} as Record<string, number>);
 
   const categoryData = Object.entries(byCategory).map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
-  const severityData = Object.entries(bySeverity).map(([name, value], i) => ({
-    name, value, color: ["#22c55e", "#eab308", "#f97316", "#ef4444"][i] || "#3b82f6",
+  const severityData = Object.entries(bySeverity).map(([name, value]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    value,
+    color: name === "critical" ? "#ef4444" : name === "high" ? "#f97316" : name === "medium" ? "#eab308" : "#22c55e",
   }));
   const departmentData = Object.entries(byDepartment).map(([name, count]) => ({ name, count }));
 
   const statusTimeline = (() => {
     const byDate: Record<string, { reports: number; resolved: number }> = {};
     reports.forEach((r) => {
-      const date = r.created_at ? new Date(r.created_at).toLocaleDateString() : "Unknown";
+      let date = "Unknown";
+      try { if (r.created_at) date = new Date(r.created_at).toISOString().split("T")[0]; } catch {}
       if (!byDate[date]) byDate[date] = { reports: 0, resolved: 0 };
       byDate[date].reports++;
       if (r.status === "resolved") byDate[date].resolved++;
     });
-    return Object.entries(byDate).slice(-14).map(([date, data]) => ({ date: date.split("/").slice(0, 2).join("/"), ...data }));
+    return Object.entries(byDate).slice(-14).map(([date, data]) => ({ date: date.slice(5), ...data }));
   })();
 
   const stats = [
@@ -230,6 +235,77 @@ Respond with ONLY a JSON array of 3 insight strings, e.g. ["insight 1", "insight
             ) : (
               <p className="text-sm text-muted-foreground text-center py-12">No timeline data yet.</p>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Monthly Trends</CardTitle></CardHeader>
+          <CardContent>
+            {(() => {
+              const byMonth: Record<string, { reports: number; resolved: number }> = {};
+              reports.forEach((r) => {
+                if (!r.created_at) return;
+                let month: string;
+                try { month = new Date(r.created_at).toISOString().slice(0, 7); } catch { return; }
+                if (!byMonth[month]) byMonth[month] = { reports: 0, resolved: 0 };
+                byMonth[month].reports++;
+                if (r.status === "resolved") byMonth[month].resolved++;
+              });
+              const monthlyData = Object.entries(byMonth).slice(-12).map(([month, data]) => ({ month, ...data }));
+              return monthlyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="reports" fill="#3b82f6" name="Reports" />
+                    <Bar dataKey="resolved" fill="#22c55e" name="Resolved" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : <p className="text-sm text-muted-foreground text-center py-12">No monthly data yet.</p>;
+            })()}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-4 w-4" /> Top Reporters
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const reporterCounts: Record<string, { name: string; count: number }> = {};
+              reports.forEach((r) => {
+                const uid = r.user_id || "unknown";
+                const name = r.user_name || "Anonymous";
+                if (!reporterCounts[uid]) reporterCounts[uid] = { name, count: 0 };
+                reporterCounts[uid].count++;
+              });
+              const topReporters = Object.entries(reporterCounts)
+                .map(([, v]) => v)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 10);
+              return topReporters.length > 0 ? (
+                <div className="space-y-3">
+                  {topReporters.map((reporter, i) => (
+                    <div key={reporter.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          i === 0 ? "bg-yellow-100 text-yellow-700" :
+                          i === 1 ? "bg-gray-100 text-gray-600" :
+                          i === 2 ? "bg-orange-100 text-orange-700" :
+                          "bg-muted text-muted-foreground"
+                        }`}>{i + 1}</span>
+                        <span className="text-sm">{reporter.name}</span>
+                      </div>
+                      <span className="text-sm font-medium">{reporter.count} reports</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-sm text-muted-foreground text-center py-4">No reporters yet.</p>;
+            })()}
           </CardContent>
         </Card>
       </div>

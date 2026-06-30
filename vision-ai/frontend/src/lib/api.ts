@@ -13,6 +13,7 @@ export interface GeminiResult {
   department: string;
   priority: string;
   estimatedResolution: string;
+  estimatedRepairCost?: string;
   suggestedAction: string;
   citizenSummary: string;
   rootCause: string;

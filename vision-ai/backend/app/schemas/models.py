@@ -38,6 +38,7 @@ class GeminiAnalysis(BaseModel):
     department: str
     priority: str
     estimatedResolution: str
+    estimatedRepairCost: str = "Not available"
     suggestedAction: str
     citizenSummary: str
     rootCause: str

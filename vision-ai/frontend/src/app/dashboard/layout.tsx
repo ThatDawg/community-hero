@@ -10,6 +10,7 @@ import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { requestNotificationPermission, onForegroundMessage } from "@/lib/notifications";
 import { doc, getDoc } from "firebase/firestore";
+import { useTheme } from "next-themes";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -25,9 +26,14 @@ import {
   ShieldCheck,
   Users,
   Settings,
+  Building2,
+  ClipboardCheck,
   Menu,
   X,
+  Moon,
+  Sun,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function DashboardLayout({
   children,
@@ -38,6 +44,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userRole, setUserRole] = useState("citizen");
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -68,6 +75,7 @@ export default function DashboardLayout({
   const handleSignOut = async () => {
     await signOut(auth);
     router.push("/auth");
+    toast.info("Signed out successfully");
   };
 
   const navItems = [
@@ -79,14 +87,22 @@ export default function DashboardLayout({
     { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
     { href: "/dashboard/leaderboard", label: "Leaderboard", icon: Trophy },
-    ...(userRole === "volunteer" || userRole === "admin"
+    ...(userRole === "volunteer" || userRole === "moderator" || userRole === "admin"
       ? [{ href: "/dashboard/volunteer", label: "Volunteer", icon: Shield }]
       : []),
-    ...(userRole === "official" || userRole === "admin"
+    ...(userRole === "official" || userRole === "moderator" || userRole === "admin"
       ? [{ href: "/dashboard/government", label: "Municipal Dashboard", icon: ShieldCheck }]
+      : []),
+    ...(userRole === "moderator" || userRole === "admin"
+      ? [
+          { href: "/dashboard/verification", label: "Verification", icon: ClipboardCheck },
+          { href: "/dashboard/departments", label: "Departments", icon: Building2 },
+        ]
       : []),
     ...(userRole === "admin"
       ? [
+          { href: "/dashboard/verification", label: "Verification", icon: ClipboardCheck },
+          { href: "/dashboard/departments", label: "Departments", icon: Building2 },
           { href: "/dashboard/users", label: "User Management", icon: Users },
           { href: "/dashboard/settings", label: "Settings", icon: Settings },
         ]
@@ -143,7 +159,15 @@ export default function DashboardLayout({
         </div>
         <Button
           variant="ghost"
-          className="mt-2 w-full justify-start gap-2"
+          className="w-full justify-start gap-2"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {theme === "dark" ? "Light Mode" : "Dark Mode"}
+        </Button>
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-2"
           onClick={handleSignOut}
         >
           <LogOut className="h-4 w-4" />

@@ -13,6 +13,7 @@ Provide a JSON response with these fields:
     "department": "Responsible department (Public Works, Sanitation, Electrical, Water, Parks, Traffic)",
     "priority": "critical/high/medium/low",
     "estimatedResolution": "Estimated time to resolve",
+    "estimatedRepairCost": "Estimated repair cost in rupees (e.g. ₹5,000-₹10,000 or 'Not available')",
     "suggestedAction": "Recommended immediate action",
     "citizenSummary": "Friendly summary for the citizen",
     "rootCause": "Potential root cause analysis"

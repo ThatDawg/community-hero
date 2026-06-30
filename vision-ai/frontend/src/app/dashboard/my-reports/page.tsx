@@ -31,7 +31,7 @@ const getUpvoted = (): string[] => {
 };
 const setUpvoted = (id: string) => {
   const list = getUpvoted();
-  if (!list.includes(id)) { list.push(id); localStorage.setItem("upvoted_reports", JSON.stringify(list)); }
+  if (!list.includes(id)) { list.push(id); try { localStorage.setItem("upvoted_reports", JSON.stringify(list)); } catch {} }
 };
 
 const statusColors: Record<string, string> = {

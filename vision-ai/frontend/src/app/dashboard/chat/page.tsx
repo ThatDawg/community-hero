@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mic, Send, Bot, User, Loader2, Globe, Languages } from "lucide-react";
+import { Mic, Send, Bot, User, Loader2, Languages } from "lucide-react";
 import { chatWithAI, transcribeVoice } from "@/lib/api";
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
@@ -18,18 +18,18 @@ When reporting, ask: What is the issue? Where is it? How severe is it? When did 
 You can respond in any language the user writes in.`;
 
 const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "hi", label: "Hindi" },
-  { code: "es", label: "Spanish" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "ar", label: "Arabic" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
-  { code: "pt", label: "Portuguese" },
-  { code: "bn", label: "Bengali" },
-  { code: "ta", label: "Tamil" },
-  { code: "te", label: "Telugu" },
+  { code: "en-US", label: "English" },
+  { code: "hi-IN", label: "Hindi" },
+  { code: "es-ES", label: "Spanish" },
+  { code: "fr-FR", label: "French" },
+  { code: "de-DE", label: "German" },
+  { code: "ar-SA", label: "Arabic" },
+  { code: "zh-CN", label: "Chinese" },
+  { code: "ja-JP", label: "Japanese" },
+  { code: "pt-BR", label: "Portuguese" },
+  { code: "bn-IN", label: "Bengali" },
+  { code: "ta-IN", label: "Tamil" },
+  { code: "te-IN", label: "Telugu" },
 ];
 
 interface Message {
@@ -52,7 +52,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [selectedLang, setSelectedLang] = useState("en");
+  const [selectedLang, setSelectedLang] = useState("en-US");
   const [showLangMenu, setShowLangMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<unknown>(null);
@@ -67,7 +67,7 @@ export default function ChatPage() {
 
   const callGemini = async (userMessage: string) => {
     const langName = LANGUAGES.find((l) => l.code === selectedLang)?.label || "English";
-    const langInstruction = selectedLang !== "en"
+    const langInstruction = selectedLang !== "en-US"
       ? `\n\nIMPORTANT: The user's preferred language is ${langName}. Translate your entire response to ${langName}.`
       : "";
 
@@ -134,7 +134,7 @@ export default function ChatPage() {
     }
 
     const recognition = new (SpeechRecognitionAPI as new () => unknown)() as Record<string, unknown>;
-    recognition.lang = selectedLang === "en" ? "en-US" : selectedLang;
+    recognition.lang = selectedLang;
     recognition.interimResults = true;
     recognition.continuous = false;
 

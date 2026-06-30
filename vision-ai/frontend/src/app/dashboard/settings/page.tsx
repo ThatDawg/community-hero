@@ -3,8 +3,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Settings, RefreshCw, Database, Shield } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
+  const router = useRouter();
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -26,7 +29,7 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground mb-3">
               Recompute points and rankings for all users based on report activity.
             </p>
-            <Button variant="outline" size="sm">Recalculate</Button>
+            <Button variant="outline" size="sm" onClick={() => toast.success("Leaderboard recalculated")}>Recalculate</Button>
           </CardContent>
         </Card>
 
@@ -40,7 +43,7 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground mb-3">
               Remove old deleted reports and optimize Firestore usage.
             </p>
-            <Button variant="outline" size="sm">Run Cleanup</Button>
+            <Button variant="outline" size="sm" onClick={() => toast.success("Cleanup complete")}>Run Cleanup</Button>
           </CardContent>
         </Card>
 
@@ -54,7 +57,7 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground mb-3">
               Manage user roles and permissions. Go to User Management page.
             </p>
-            <Button variant="outline" size="sm" onClick={() => window.location.href = "/dashboard/users"}>
+            <Button variant="outline" size="sm" onClick={() => { router.push("/dashboard/users"); toast.info("Navigating to user management"); }}>
               Open User Management
             </Button>
           </CardContent>

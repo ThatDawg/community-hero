@@ -17,7 +17,7 @@ export default function ProfilePage() {
     getUserReports(user.uid).then((data) => {
       setReports(data.length);
       setResolved(data.filter((r) => r.status === "resolved").length);
-    });
+    }).catch((e) => console.error("Failed to load reports:", e));
   }, [user]);
 
   const badges = [

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import dynamic from "next/dynamic";
 import { getAllReports } from "@/lib/firestore";
-import { MapPin, Layers, Navigation } from "lucide-react";
+import { Layers, Navigation } from "lucide-react";
 
 const LeafletMap = dynamic(() => import("@/components/leaflet-map"), {
   ssr: false,
@@ -39,10 +39,12 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
+  const a = Math.min(
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    Math.sin(dLng / 2) * Math.sin(dLng / 2),
+    1
+  );
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -60,7 +62,7 @@ export default function MapPage() {
     getAllReports()
       .then((data) => {
         const mapped = data
-          .filter((r) => r.latitude && r.longitude)
+          .filter((r) => r.latitude != null && r.longitude != null)
           .map((r) => ({
             id: r.id,
             title: r.title || r.description?.slice(0, 40) || "Untitled",

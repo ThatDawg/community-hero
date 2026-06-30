@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Bell, CheckCircle, AlertTriangle, CheckCheck } from "lucide-react";
 import { useAuth } from "@/lib/firebase-context";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, where } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, updateDoc, where } from "firebase/firestore";
 
 interface Notification {
   id: string;
@@ -41,12 +41,12 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = async (id: string) => {
-    await updateDoc(doc(db, "notifications", id), { read: true });
+    try { await updateDoc(doc(db, "notifications", id), { read: true }); } catch {}
   };
 
   const markAllAsRead = async () => {
     const unread = notifications.filter((n) => !n.read);
-    await Promise.all(unread.map((n) => updateDoc(doc(db, "notifications", n.id), { read: true })));
+    try { await Promise.all(unread.map((n) => updateDoc(doc(db, "notifications", n.id), { read: true }))); } catch {}
   };
 
   const getIcon = (type: string) => {

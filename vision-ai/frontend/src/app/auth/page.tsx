@@ -9,9 +9,10 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth, googleProvider, db } from "@/lib/firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -49,16 +50,19 @@ export default function AuthPage() {
       if (isLogin) {
         const cred = await signInWithEmailAndPassword(auth, email, password);
         await saveUserProfile(cred.user.uid, cred.user.displayName || name || "Citizen", email, cred.user.photoURL || undefined);
+        toast.success("Welcome back!", { description: "Signed in successfully" });
       } else {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         if (name) {
           await updateProfile(cred.user, { displayName: name });
         }
         await saveUserProfile(cred.user.uid, name || "Citizen", email, undefined, role);
+        toast.success("Account created!", { description: "Welcome to Vision AI" });
       }
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed");
+      toast.error("Authentication failed", { description: err instanceof Error ? err.message : "Please try again" });
     } finally {
       setLoading(false);
     }
@@ -70,9 +74,11 @@ export default function AuthPage() {
     try {
       const cred = await signInWithPopup(auth, googleProvider);
       await saveUserProfile(cred.user.uid, cred.user.displayName || "Citizen", cred.user.email || "", cred.user.photoURL || undefined);
+      toast.success("Signed in with Google");
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed");
+      toast.error("Google sign-in failed", { description: err instanceof Error ? err.message : "Please try again" });
     } finally {
       setLoading(false);
     }

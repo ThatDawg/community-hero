@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import {
   Camera,
   Map,
@@ -11,7 +12,25 @@ import {
   Bot,
   Mic,
   BarChart3,
+  Shield,
+  Zap,
+  Sparkles,
+  CheckCircle,
 } from "lucide-react";
+
+const fadeUp = {
+  initial: { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+  transition: { duration: 0.5 },
+};
+
+const stagger = {
+  initial: { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+  transition: { staggerChildren: 0.1, duration: 0.4 },
+};
 
 export default function Home() {
   const features = [
@@ -59,18 +78,37 @@ export default function Home() {
       {/* Hero Section */}
       <header className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8"
+        >
           <div className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+            >
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-sm text-white/80 mb-6">
+                <Sparkles className="h-3 w-3" /> AI-Powered Civic Platform
+              </span>
+            </motion.div>
+            <h1 className="text-5xl font-bold tracking-tight text-white sm:text-7xl">
               Vision <span className="text-blue-200">AI</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-blue-100">
               AI-powered civic issue detection, reporting, and resolution platform.
               Report issues with a photo, get instant AI analysis, and track resolution in real-time.
             </p>
-            <div className="mt-10 flex items-center justify-center gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className="mt-10 flex items-center justify-center gap-4 flex-wrap"
+            >
               <Link href="/auth">
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50">
+                <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg">
                   Get Started
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -80,27 +118,35 @@ export default function Home() {
                   View Demo
                 </Button>
               </Link>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
       </header>
 
       {/* Stats */}
-      <section className="border-b bg-muted/50">
+      <motion.section {...fadeUp} className="border-b bg-muted/50">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.3 }}
+                className="text-center"
+              >
                 <div className="text-3xl font-bold text-primary">{stat.value}</div>
                 <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Features */}
-      <section className="py-20">
+      <motion.section {...fadeUp} className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold">Powered by AI</h2>
@@ -108,80 +154,130 @@ export default function Home() {
               Combining YOLO vision detection with Gemini AI analysis
             </p>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
-              <Card key={feature.title} className="border-2 hover:border-primary/50 transition-colors">
-                <CardContent className="p-6">
-                  <feature.icon className="h-12 w-12 text-primary" />
-                  <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {feature.description}
-                  </p>
-                </CardContent>
-              </Card>
+          <motion.div
+            initial="initial"
+            whileInView="whileInView"
+            viewport={{ once: true }}
+            className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+          >
+            {features.map((feature, i) => (
+              <motion.div
+                key={feature.title}
+                variants={{
+                  initial: { opacity: 0, y: 20 },
+                  whileInView: { opacity: 1, y: 0 },
+                }}
+                transition={{ delay: i * 0.08, duration: 0.4 }}
+              >
+                <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-lg group">
+                  <CardContent className="p-6">
+                    <feature.icon className="h-12 w-12 text-primary group-hover:scale-110 transition-transform" />
+                    <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {feature.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* How It Works */}
-      <section className="bg-muted/50 py-20">
+      <motion.section {...fadeUp} className="bg-muted/50 py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold">How It Works</h2>
           </div>
           <div className="mt-12 grid gap-8 md:grid-cols-5">
             {[
-              { step: "1", title: "Capture", desc: "Take a photo of the issue" },
-              { step: "2", title: "Detect", desc: "YOLO identifies the problem" },
-              { step: "3", title: "Analyze", desc: "Gemini AI provides insights" },
-              { step: "4", title: "Report", desc: "Auto-route to department" },
-              { step: "5", title: "Resolve", desc: "Track until resolution" },
-            ].map((item) => (
-              <div key={item.step} className="text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+              { step: "1", title: "Capture", desc: "Take a photo of the issue", icon: Camera },
+              { step: "2", title: "Detect", desc: "YOLO identifies the problem", icon: Zap },
+              { step: "3", title: "Analyze", desc: "Gemini AI provides insights", icon: Brain },
+              { step: "4", title: "Report", desc: "Auto-route to department", icon: Shield },
+              { step: "5", title: "Resolve", desc: "Track until resolution", icon: CheckCircle },
+            ].map((item, i) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.4 }}
+                className="text-center"
+              >
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg">
                   {item.step}
                 </div>
-                <h3 className="mt-4 font-semibold">{item.title}</h3>
+                <item.icon className="mx-auto mt-3 h-6 w-6 text-primary" />
+                <h3 className="mt-2 font-semibold">{item.title}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{item.desc}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Tech Stack */}
-      <section className="py-20">
+      <motion.section {...fadeUp} className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold">Google Technologies Used</h2>
+            <h2 className="text-3xl font-bold">Google Technologies</h2>
+            <p className="mt-2 text-muted-foreground">Built on Google Cloud & AI stack</p>
           </div>
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
+          <motion.div
+            initial="initial"
+            whileInView="whileInView"
+            viewport={{ once: true }}
+            className="mt-8 flex flex-wrap justify-center gap-4"
+          >
             {[
-              "Gemini API",
-              "Firebase Auth",
-              "Firestore",
-              "Firebase Storage",
-              "Cloud Messaging",
-              "Cloud Run",
-              "YOLO",
-              "Next.js",
-            ].map((tech) => (
-              <span
+              "Gemini API", "Firebase Auth", "Cloud Firestore", "Firebase Storage",
+              "Cloud Messaging", "Cloud Run", "YOLO", "Next.js",
+            ].map((tech, i) => (
+              <motion.span
                 key={tech}
-                className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary"
+                variants={{
+                  initial: { opacity: 0, scale: 0.8 },
+                  whileInView: { opacity: 1, scale: 1 },
+                }}
+                transition={{ delay: i * 0.05, duration: 0.3 }}
+                className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
               >
                 {tech}
-              </span>
+              </motion.span>
             ))}
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
+
+      {/* CTA */}
+      <motion.section {...fadeUp} className="bg-gradient-to-r from-blue-600 to-purple-700 py-20">
+        <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-white">Ready to Make Your City Smarter?</h2>
+          <p className="mt-4 text-lg text-blue-100 max-w-2xl mx-auto">
+            Join thousands of citizens using AI to report and resolve civic issues faster.
+          </p>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+          >
+            <Link href="/auth">
+              <Button size="lg" className="mt-8 bg-white text-blue-600 hover:bg-blue-50 shadow-lg">
+                Get Started Now
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
+      </motion.section>
 
       {/* Footer */}
       <footer className="border-t bg-muted/50 py-8">
         <div className="mx-auto max-w-7xl px-4 text-center text-sm text-muted-foreground">
-          <p>Built for Hackathon | Vision AI - Making Cities Smarter</p>
+          <p>Vision AI — Making Cities Smarter with AI</p>
         </div>
       </footer>
     </div>
