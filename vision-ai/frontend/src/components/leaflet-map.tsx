@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -34,17 +32,6 @@ const categoryIcons: Record<string, string> = {
   open_manhole: "\u{1F573}\uFE0F",
 };
 
-function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 interface MapProps {
   reports: Report[];
   showHeatmap?: boolean;
@@ -57,6 +44,7 @@ export default function LeafletMap({ reports, showHeatmap = false, center, zoom,
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const heatLayerRef = useRef<L.Layer | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -81,11 +69,45 @@ export default function LeafletMap({ reports, showHeatmap = false, center, zoom,
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    map.eachLayer((layer) => {
-      if (layer instanceof L.Marker) {
-        map.removeLayer(layer);
+    markersRef.current.forEach((m) => map.removeLayer(m));
+    markersRef.current = [];
+
+    if (heatLayerRef.current) {
+      map.removeLayer(heatLayerRef.current);
+      heatLayerRef.current = null;
+    }
+
+    if (showHeatmap && reports.length > 0) {
+      const heatPoints: { lat: number; lng: number; intensity: number }[] = reports.map((r) => ({
+        lat: r.lat,
+        lng: r.lng,
+        intensity: r.severity === "critical" ? 1.0 : r.severity === "high" ? 0.7 : r.severity === "medium" ? 0.4 : 0.2,
+      }));
+
+      const bounds = map.getBounds();
+      const ne = bounds.getNorthEast();
+      const sw = bounds.getSouthWest();
+      const heatCanvas = document.createElement("canvas");
+      heatCanvas.width = 256;
+      heatCanvas.height = 256;
+      const ctx = heatCanvas.getContext("2d");
+
+      if (ctx) {
+        heatPoints.forEach((p) => {
+          const point = map.latLngToContainerPoint(L.latLng(p.lat, p.lng));
+          const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, 50);
+          gradient.addColorStop(0, `rgba(255, 0, 0, ${p.intensity * 0.6})`);
+          gradient.addColorStop(0.5, `rgba(255, 255, 0, ${p.intensity * 0.3})`);
+          gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+          ctx.fillStyle = gradient;
+          ctx.fillRect(point.x - 50, point.y - 50, 100, 100);
+        });
+
+        const imageOverlay = L.imageOverlay(heatCanvas.toDataURL(), bounds, { opacity: 0.6 });
+        imageOverlay.addTo(map);
+        heatLayerRef.current = imageOverlay;
       }
-    });
+    }
 
     reports.forEach((report) => {
       const color = severityColors[report.severity] || "#3b82f6";
@@ -110,6 +132,7 @@ export default function LeafletMap({ reports, showHeatmap = false, center, zoom,
       });
 
       const marker = L.marker([report.lat, report.lng], { icon: markerIcon }).addTo(map);
+      markersRef.current.push(marker);
 
       marker.bindPopup(`
         <div style="min-width: 200px;">
@@ -123,37 +146,6 @@ export default function LeafletMap({ reports, showHeatmap = false, center, zoom,
         </div>
       `);
     });
-
-    if (showHeatmap && reports.length > 0) {
-      if (heatLayerRef.current) {
-        map.removeLayer(heatLayerRef.current);
-      }
-      const heatData: [number, number, number][] = reports.map((r) => {
-        const intensity = r.severity === "critical" ? 1.0 : r.severity === "high" ? 0.7 : r.severity === "medium" ? 0.4 : 0.2;
-        return [r.lat, r.lng, intensity];
-      });
-
-      const heatCanvas = document.createElement("canvas");
-      heatCanvas.width = 256;
-      heatCanvas.height = 256;
-      const ctx = heatCanvas.getContext("2d");
-
-      if (ctx) {
-        heatData.forEach(([lat, lng, intensity]) => {
-          const point = map.latLngToContainerPoint(L.latLng(lat, lng));
-          const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, 50);
-          gradient.addColorStop(0, `rgba(255, 0, 0, ${intensity * 0.6})`);
-          gradient.addColorStop(0.5, `rgba(255, 255, 0, ${intensity * 0.3})`);
-          gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
-          ctx.fillStyle = gradient;
-          ctx.fillRect(point.x - 50, point.y - 50, 100, 100);
-        });
-
-        const imageOverlay = L.imageOverlay(heatCanvas.toDataURL(), map.getBounds(), { opacity: 0.6 });
-        imageOverlay.addTo(map);
-        heatLayerRef.current = imageOverlay;
-      }
-    }
   }, [reports, showHeatmap]);
 
   return <div ref={mapRef} style={{ height: height || "600px" }} className="w-full" />;

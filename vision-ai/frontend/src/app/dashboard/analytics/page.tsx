@@ -73,7 +73,7 @@ Respond with ONLY a JSON array of 3 insight strings, e.g. ["insight 1", "insight
 
   const total = reports.length;
   const resolved = reports.filter((r) => r.status === "resolved").length;
-  const pending = reports.filter((r) => r.status === "reported").length;
+  const pending = reports.filter((r) => r.status === "reported" || r.status === "verified" || r.status === "pending").length;
   const inProgress = reports.filter((r) => r.status === "in_progress").length;
 
   const resolutionTimes = reports

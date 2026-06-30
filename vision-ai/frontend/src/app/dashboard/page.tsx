@@ -52,7 +52,7 @@ export default function DashboardPage() {
     getUserReports(user.uid).then((reports) => {
       setMyReports(reports.length);
       setMyResolved(reports.filter((r) => r.status === "resolved").length);
-      setMyPending(reports.filter((r) => r.status !== "resolved").length);
+      setMyPending(reports.filter((r) => r.status === "reported" || r.status === "verified").length);
     }).catch((e) => console.error("getUserReports failed:", e));
     getAllReports().then((all) => {
       setTotalReports(all.length);

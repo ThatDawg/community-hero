@@ -123,7 +123,7 @@ export default function GovernmentPage() {
   const activeReports = reports.filter((r) => !r.archived && !r.deleted);
   const total = activeReports.length;
   const resolved = activeReports.filter((r) => r.status === "resolved").length;
-  const pending = activeReports.filter((r) => r.status === "reported").length;
+  const pending = activeReports.filter((r) => r.status === "reported" || r.status === "verified" || r.status === "pending").length;
   const inProgress = activeReports.filter((r) => r.status === "in_progress").length;
   const critical = activeReports.filter((r) => r.severity === "critical").length;
 
