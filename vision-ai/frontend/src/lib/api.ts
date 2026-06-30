@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8000";
+const API_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000").replace(/\/$/, "");
 
 export interface DetectionResult {
   category: string;
@@ -59,17 +59,40 @@ export async function chatWithAI(message: string, context?: string) {
   return res.json();
 }
 
-export async function transcribeVoice(audioBlob: Blob) {
-  const formData = new FormData();
-  formData.append("audio", audioBlob, "recording.webm");
-
-  const res = await fetch(`${API_URL}/api/voice`, {
+export async function generateAIText(message: string, systemPrompt?: string) {
+  const res = await fetch(`${API_URL}/api/chat`, {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, system_prompt: systemPrompt }),
   });
 
-  if (!res.ok) throw new Error("Transcription failed");
-  return res.json();
+  if (!res.ok) throw new Error("AI request failed");
+  const data = await res.json();
+  return data.response as string;
+}
+
+export async function generateProgressSummary(
+  reportId: string,
+  title: string,
+  status: string,
+  department: string,
+  comments: string[]
+) {
+  const res = await fetch(`${API_URL}/api/summary`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      report_id: reportId,
+      title,
+      status,
+      department,
+      comments,
+    }),
+  });
+
+  if (!res.ok) throw new Error("Summary failed");
+  const data = await res.json();
+  return data.summary as string;
 }
 
 export async function getAnalytics() {

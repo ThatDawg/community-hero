@@ -1,4 +1,3 @@
-from ultralytics import YOLO
 from PIL import Image
 from typing import List, Dict
 from app.utils.config import YOLO_MODEL_PATH
@@ -22,6 +21,11 @@ model = None
 def get_model():
     global model
     if model is None:
+        try:
+            from ultralytics import YOLO
+        except ImportError:
+            return None
+
         if os.path.exists(YOLO_MODEL_PATH):
             model = YOLO(YOLO_MODEL_PATH)
         else:
@@ -31,6 +35,9 @@ def get_model():
 
 def detect_issues(image: Image.Image) -> List[Dict]:
     mdl = get_model()
+    if mdl is None:
+        return []
+
     results = mdl(image)
     detections = []
 

@@ -1,14 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from PIL import Image
 import io
-import os
 import logging
 
 from app.schemas.models import (
     AnalyzeResponse,
     ChatRequest,
     ChatResponse,
-    VoiceResponse,
     DetectionResult,
     GeminiAnalysis,
     ProgressSummaryRequest,
@@ -20,21 +18,6 @@ from app.database.firebase import db
 
 logger = logging.getLogger("vision-ai")
 router = APIRouter()
-
-whisper_model = None
-
-
-def get_whisper_model():
-    global whisper_model
-    if whisper_model is None:
-        try:
-            import whisper
-            whisper_model = whisper.load_model("base")
-            logger.info("Whisper model loaded")
-        except Exception as e:
-            logger.error(f"Failed to load Whisper: {e}")
-    return whisper_model
-
 
 @router.get("/health")
 async def health():
@@ -90,37 +73,11 @@ async def analyze_report(
 @router.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
-        response = chat_with_gemini(request.message, request.context)
+        context = "\n\n".join(filter(None, [request.system_prompt, request.context]))
+        response = chat_with_gemini(request.message, context or None)
         return ChatResponse(response=response)
     except Exception as e:
         logger.error(f"Chat error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/api/voice", response_model=VoiceResponse)
-async def transcribe_voice(audio: UploadFile = File(...)):
-    try:
-        audio_bytes = await audio.read()
-
-        model = get_whisper_model()
-        if model is None:
-            return VoiceResponse(text="Voice transcription is loading. Please try again in a moment.")
-
-        import tempfile
-        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
-            tmp.write(audio_bytes)
-            tmp_path = tmp.name
-
-        try:
-            result = model.transcribe(tmp_path)
-            text = result.get("text", "")
-            logger.info(f"Whisper transcribed: {text[:50]}...")
-            return VoiceResponse(text=text)
-        finally:
-            os.unlink(tmp_path)
-
-    except Exception as e:
-        logger.error(f"Voice transcription error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

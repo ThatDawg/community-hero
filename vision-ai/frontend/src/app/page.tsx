@@ -50,7 +50,7 @@ export default function Home() {
     {
       icon: Mic,
       title: "Voice Reports",
-      description: "Report issues using voice commands with Whisper transcription",
+      description: "Report issues using browser voice input when supported",
     },
     {
       icon: BarChart3,
@@ -215,8 +215,8 @@ export default function Home() {
       <motion.section {...fadeUp} className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold">Google Technologies</h2>
-            <p className="mt-2 text-muted-foreground">Built on Google Cloud & AI stack</p>
+            <h2 className="text-3xl font-bold">Technology Stack</h2>
+            <p className="mt-2 text-muted-foreground">Built for a free-hosted hackathon deployment</p>
           </div>
           <motion.div
             initial="initial"
@@ -226,7 +226,7 @@ export default function Home() {
           >
             {[
               "Gemini API", "Firebase Auth", "Cloud Firestore", "Firebase Storage",
-              "Cloud Messaging", "Cloud Run", "YOLO", "Next.js",
+              "Cloud Messaging", "FastAPI", "Render", "Next.js",
             ].map((tech, i) => (
               <motion.span
                 key={tech}

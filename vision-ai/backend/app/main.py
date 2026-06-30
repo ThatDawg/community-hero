@@ -2,12 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-try:
-    import google.cloud.logging
-    google.cloud.logging.Client().setup_logging()
-except Exception:
-    pass
-
 logger = logging.getLogger("vision-ai")
 
 from app.routers.routes import router

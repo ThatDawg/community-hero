@@ -12,13 +12,12 @@ import ConfirmDialog from "@/components/confirm-dialog";
 import { ArrowLeft, MapPin, Clock, ThumbsUp, Send, CheckCircle, Share2, Languages, FileText, Loader2, MoreHorizontal, Edit, Trash2, Link, Copy } from "lucide-react";
 import { useAuth } from "@/lib/firebase-context";
 import { getReport, upvoteReport, softDeleteReport, updateReport } from "@/lib/firestore";
+import { generateAIText, generateProgressSummary } from "@/lib/api";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, increment, setDoc, getDoc } from "firebase/firestore";
 import { toast } from "sonner";
 
 const LeafletMap = dynamic(() => import("@/components/leaflet-map"), { ssr: false });
-
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
 interface Report {
   id: string;
@@ -182,15 +181,10 @@ export default function ReportDetailPage() {
     if (!report) return;
     setTranslating(true);
     try {
-      const response = await fetch(GEMINI_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `Translate the following civic issue report to Hindi, Spanish, and French. Provide all three translations separated by "---":\n\nTitle: ${report.title}\nDescription: ${report.description}` }] }],
-        }),
-      });
-      const data = await response.json();
-      setTranslatedDesc(data.candidates?.[0]?.content?.parts?.[0]?.text || "Translation unavailable");
+      const translated = await generateAIText(
+        `Translate the following civic issue report to Hindi, Spanish, and French. Provide all three translations separated by "---":\n\nTitle: ${report.title}\nDescription: ${report.description}`
+      );
+      setTranslatedDesc(translated || "Translation unavailable");
     } catch {
       setTranslatedDesc("Translation service unavailable");
     }
@@ -217,15 +211,14 @@ export default function ReportDetailPage() {
     if (!report) return;
     setGeneratingSummary(true);
     try {
-      const response = await fetch(GEMINI_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `Generate a professional progress summary for this civic issue report for government officials:\n\nReport ID: ${report.id}\nTitle: ${report.title}\nStatus: ${report.status}\nDepartment: ${report.department || "Unassigned"}\nComments: ${comments.map((c) => c.text).join("; ") || "None"}\n\nProvide a brief, professional summary covering: current status, next steps, department action required, estimated timeline, any risks.` }] }],
-        }),
-      });
-      const data = await response.json();
-      setProgressSummary(data.candidates?.[0]?.content?.parts?.[0]?.text || "Summary generation failed");
+      const summary = await generateProgressSummary(
+        report.id,
+        report.title,
+        report.status,
+        report.department || "Unassigned",
+        comments.map((c) => c.text)
+      );
+      setProgressSummary(summary || "Summary generation failed");
     } catch {
       setProgressSummary("Summary generation failed. Please try again.");
     }

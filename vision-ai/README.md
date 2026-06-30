@@ -53,7 +53,7 @@ Civic issues like potholes, garbage accumulation, broken streetlights, and water
 │           │                                              │
 │  Resolution Prediction ──→ Timeline estimation           │
 │                                                          │
-│  Whisper (Optional) ──→ Voice transcription              │
+│  Browser Speech ──→ Voice input without backend cost      │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -81,9 +81,7 @@ Civic issues like potholes, garbage accumulation, broken streetlights, and water
 | **Firebase Storage** | Issue photo uploads |
 | **Firebase Cloud Messaging** | Push notifications |
 | **Firebase Hosting** | Static frontend deployment |
-| **Google Cloud Run** | Backend API deployment |
-| **Google Cloud Build** | CI/CD pipeline |
-| **Google Cloud Logging** | Backend observability |
+| **Render free web service** | Backend API deployment |
 
 ## Screenshots
 
@@ -94,7 +92,7 @@ Civic issues like potholes, garbage accumulation, broken streetlights, and water
 | ![Dashboard](docs/screenshots/dashboard.png) | Stats, recent activity, quick actions |
 | ![Report](docs/screenshots/report.png) | Photo upload with AI analysis |
 | ![Map](docs/screenshots/map.png) | Leaflet heatmap with filters |
-| ![Chatbot](docs/screenshots/chatbot.png) | AI assistant with voice input |
+| ![Chatbot](docs/screenshots/chatbot.png) | AI assistant with browser speech input |
 | ![Analytics](docs/screenshots/analytics.png) | Charts and Gemini insights |
 | ![Government](docs/screenshots/government.png) | Official dashboard with status management |
 | ![Volunteer](docs/screenshots/volunteer.png) | Task queue and issue management |
@@ -112,9 +110,9 @@ Civic issues like potholes, garbage accumulation, broken streetlights, and water
 | Storage | Firebase Storage |
 | Maps | Leaflet + OpenStreetMap |
 | Notifications | Firebase Cloud Messaging |
-| Voice | Web Speech API + Whisper |
+| Voice | Web Speech API |
 | Hosting | Firebase Hosting |
-| Backend Deploy | Google Cloud Run |
+| Backend Deploy | Render free web service |
 
 ## Installation
 
@@ -122,14 +120,13 @@ Civic issues like potholes, garbage accumulation, broken streetlights, and water
 - Node.js 18+
 - Python 3.10+
 - Firebase CLI (`npm install -g firebase-tools`)
-- Google Cloud SDK
 
 ### Frontend Setup
 ```bash
 cd frontend
 npm install
 cp .env.example .env.local
-# Edit .env.local with your Firebase and Gemini keys
+# Edit .env.local with your Firebase config and backend URL
 npm run dev
 ```
 
@@ -155,17 +152,11 @@ firebase login
 firebase deploy --only hosting,firestore:rules
 ```
 
-### Backend (Google Cloud Run)
+### Backend (Free Render Service)
 ```bash
-gcloud run deploy vision-ai-backend \
-  --source . \
-  --region us-central1 \
-  --allow-unauthenticated
-```
-
-### Cloud Build (CI/CD)
-```bash
-gcloud builds submit --config deployment/cloudrun.yaml
+pip install -r backend/requirements-free.txt
+cd backend
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
 ## AI Workflow
@@ -211,7 +202,7 @@ community-hero/
 ├── .env.example                 # Root environment template
 ├── Dockerfile                   # Backend Docker config
 ├── docker-compose.yml           # Local development
-├── cloudbuild.yaml              # Google Cloud Build CI/CD
+├── render.yaml                  # Free Render backend config
 ├── firebase.json                # Firebase Hosting config
 ├── firestore.rules              # Firestore security rules
 ├── storage.rules                # Storage security rules
@@ -260,7 +251,6 @@ community-hero/
 ├── deployment/                  # Deployment configs
 │   ├── firebase.json
 │   ├── firestore.rules
-│   ├── cloudrun.yaml
 │   └── README.md
 │
 └── yolo-models/                 # YOLO training
@@ -273,7 +263,6 @@ community-hero/
 |--------|----------|-------------|
 | POST | `/api/analyze` | YOLO + Gemini analysis |
 | POST | `/api/chat` | AI chatbot |
-| POST | `/api/voice` | Voice transcription |
 | POST | `/api/summary` | Progress summary |
 | GET | `/api/analytics` | Analytics data |
 | GET | `/api/heatmap` | Heatmap data |

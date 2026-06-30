@@ -8,9 +8,9 @@ import {
 } from "recharts";
 import { TrendingUp, AlertTriangle, CheckCircle, Clock, Brain, Trophy } from "lucide-react";
 import { getAllReports } from "@/lib/firestore";
+import { generateAIText } from "@/lib/api";
 
 const COLORS = ["#f97316", "#eab308", "#3b82f6", "#06b6d4", "#22c55e", "#a855f7", "#ef4444", "#ec4899", "#6366f1"];
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
 interface Report {
   category: string;
@@ -50,16 +50,10 @@ By Category: ${JSON.stringify(catBreakdown)}
 By Severity: ${JSON.stringify(sevBreakdown)}
 By Status: ${JSON.stringify(statusBreakdown)}
 
-Respond with ONLY a JSON array of 3 insight strings, e.g. ["insight 1", "insight 2", "insight 3"]`;
+      Respond with ONLY a JSON array of 3 insight strings, e.g. ["insight 1", "insight 2", "insight 3"]`;
 
       try {
-        const response = await fetch(GEMINI_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-        });
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const text = await generateAIText(prompt);
         const match = text.match(/\[[\s\S]*\]/);
         if (match) {
           setAiInsights(JSON.parse(match[0]));

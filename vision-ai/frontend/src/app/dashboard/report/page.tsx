@@ -16,8 +16,6 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, db } from "@/lib/firebase";
 import { doc, updateDoc, increment, setDoc, getDoc } from "firebase/firestore";
 
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
-
 const SYSTEM_PROMPT = `You are Vision AI, an AI assistant for reporting civic issues. When a user describes an issue, respond with ONLY a JSON object:
 {
   "category": "pothole|water_leak|streetlight|waste|flooding|tree|road_crack|other",
@@ -30,6 +28,8 @@ const SYSTEM_PROMPT = `You are Vision AI, an AI assistant for reporting civic is
 }
 Severity: critical=danger to life, high=significant disruption, medium=moderate inconvenience, low=cosmetic
 Department: pothole→Public Works, water_leak→Water Supply, streetlight→Electricity Board, waste→Sanitation, flooding→Drainage, tree→Parks`;
+
+void SYSTEM_PROMPT;
 
 interface AIResult {
   category: string;
@@ -105,59 +105,35 @@ export default function ReportPage() {
     setError("");
     setDuplicateWarning(null);
 
-    // Try backend first (YOLO + Gemini), fall back to client-side Gemini
-    if (image) {
-      try {
-        const result = await analyzeReport(image, description, location || { lat: 28.6139, lng: 77.209 });
-        const analysis = result.geminiAnalysis;
-        setAiResult({
-          category: result.yoloResults.length > 0 ? result.yoloResults[0].category : "other",
-          category_label: result.yoloResults.length > 0 ? result.yoloResults[0].category.replace("_", " ") : "General Issue",
-          severity: analysis.priority?.toLowerCase() || "medium",
-          department: analysis.department || "General Administration",
-          title: analysis.title || description.slice(0, 50),
-          summary: analysis.citizenSummary || analysis.description || description,
-          suggested_action: analysis.suggestedAction || "Inspection required",
-        });
-        if (result.duplicateFound) {
-          setDuplicateWarning(`Similar report found (ID: ${result.duplicateReportId}). You may want to upvote the existing report instead.`);
-          toast.warning("Possible duplicate detected");
-        } else {
-          toast.success("AI analysis complete");
-        }
-        setAnalyzing(false);
-        return;
-      } catch {
-        toast.info("Backend unavailable, using client-side AI");
-      }
-    }
-
-    // Fallback: client-side Gemini text-only
     try {
-      const response = await fetch(GEMINI_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `${SYSTEM_PROMPT}\n\nUser: ${description}` }] }],
-        }),
+      const result = await analyzeReport(image, description, location || { lat: 28.6139, lng: 77.209 });
+      const analysis = result.geminiAnalysis;
+      const detectedCategory = result.yoloResults[0]?.category;
+      setAiResult({
+        category: detectedCategory || "other",
+        category_label: detectedCategory ? detectedCategory.replace("_", " ") : "General Issue",
+        severity: analysis.priority?.toLowerCase() || "medium",
+        department: analysis.department || "General Administration",
+        title: analysis.title || description.slice(0, 50),
+        summary: analysis.citizenSummary || analysis.description || description,
+        suggested_action: analysis.suggestedAction || "Inspection required",
       });
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        setAiResult(JSON.parse(jsonMatch[0]));
+      if (result.duplicateFound) {
+        setDuplicateWarning(`Similar report found (ID: ${result.duplicateReportId}). You may want to upvote the existing report instead.`);
+        toast.warning("Possible duplicate detected");
       } else {
-        setAiResult({
-          category: "other",
-          category_label: "General Issue",
-          severity: "medium",
-          department: "General Administration",
-          title: "Civic Issue Report",
-          summary: description,
-          suggested_action: "Inspection required",
-        });
+        toast.success("AI analysis complete");
       }
     } catch {
+      setAiResult({
+        category: "other",
+        category_label: "General Issue",
+        severity: "medium",
+        department: "General Administration",
+        title: description.slice(0, 50) || "Civic Issue Report",
+        summary: description,
+        suggested_action: "Inspection required",
+      });
       setError("AI analysis failed. You can still submit manually.");
     }
     setAnalyzing(false);

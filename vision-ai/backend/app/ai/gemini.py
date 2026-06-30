@@ -5,8 +5,35 @@ from app.utils.config import GOOGLE_API_KEY
 from app.ai.prompts import ANALYZE_PROMPT, CHAT_SYSTEM_PROMPT, DUPLICATE_PROMPT, SUMMARY_PROMPT
 import json
 
-genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel("gemini-2.5-flash")
+model = None
+
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+
+
+def _fallback_analysis(description: str) -> Dict:
+    lower = description.lower()
+    if any(word in lower for word in ["garbage", "trash", "waste", "dump"]):
+        category_department = "Sanitation"
+    elif any(word in lower for word in ["water", "leak", "pipe", "flood"]):
+        category_department = "Water Supply"
+    elif any(word in lower for word in ["light", "streetlight", "electric"]):
+        category_department = "Electrical"
+    else:
+        category_department = "Public Works"
+
+    return {
+        "title": description[:60] or "Civic Issue Report",
+        "description": description,
+        "department": category_department,
+        "priority": "medium",
+        "estimatedResolution": "3-5 business days",
+        "estimatedRepairCost": "Not available",
+        "suggestedAction": "Inspection required",
+        "citizenSummary": "Your report has been received and is being reviewed.",
+        "rootCause": "Requires further investigation",
+    }
 
 
 def analyze_with_gemini(
@@ -15,6 +42,9 @@ def analyze_with_gemini(
     description: str,
     location: str,
 ) -> Dict:
+    if model is None:
+        return _fallback_analysis(description)
+
     detection_text = "\n".join(
         [f"- {d['category']} (confidence: {d['confidence']}, severity: {d['severity']})" for d in detections]
     ) if detections else "No image detection results available."
@@ -37,30 +67,24 @@ def analyze_with_gemini(
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        return {
-            "title": "Civic Issue Report",
-            "description": description,
-            "department": "Public Works",
-            "priority": "medium",
-            "estimatedResolution": "3-5 business days",
-            "suggestedAction": "Inspection required",
-            "citizenSummary": "Your report has been received and is being reviewed.",
-            "rootCause": "Requires further investigation",
-        }
+        return _fallback_analysis(description)
 
 
 def chat_with_gemini(message: str, context: Optional[str] = None) -> str:
+    if model is None:
+        return "AI chat is not configured yet. Add GOOGLE_API_KEY to the backend environment."
+
     full_prompt = f"Context: {context}\n\nUser: {message}" if context else message
     response = model.generate_content(f"{CHAT_SYSTEM_PROMPT}\n\n{full_prompt}")
     return response.text
 
 
 def detect_duplicates(new_description: str, new_location: str, existing_reports: List[Dict]) -> Optional[str]:
-    if not existing_reports:
+    if model is None or not existing_reports:
         return None
 
     reports_text = "\n".join(
-        [f"- ID: {r['id']}, Title: {r['title']}, Location: {r['address']}" for r in existing_reports[:10]]
+        [f"- ID: {r.get('id')}, Title: {r.get('title', '')}, Location: {r.get('address', '')}" for r in existing_reports[:10]]
     )
 
     prompt = DUPLICATE_PROMPT.format(
@@ -84,6 +108,9 @@ def generate_progress_summary(
     department: str,
     comments: List[str],
 ) -> str:
+    if model is None:
+        return "AI summary is not configured yet. Add GOOGLE_API_KEY to the backend environment."
+
     comments_text = "\n".join([f"- {c}" for c in comments]) if comments else "No comments yet."
 
     prompt = SUMMARY_PROMPT.format(

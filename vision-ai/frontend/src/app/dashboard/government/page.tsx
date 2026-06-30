@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { Shield, Download, Merge, Bell, RefreshCw, Trash2, Archive, RotateCcw, Users, Brain, MapPin, Edit } from "lucide-react";
 import { getAllReports } from "@/lib/firestore";
+import { generateAIText } from "@/lib/api";
 import { db, storage } from "@/lib/firebase";
 import { useAuth } from "@/lib/firebase-context";
 import { collection, addDoc, doc, updateDoc, getDocs, getDoc, query, where } from "firebase/firestore";
@@ -53,8 +54,6 @@ const statusColors: Record<string, string> = {
   in_progress: "bg-yellow-100 text-yellow-700",
   resolved: "bg-green-100 text-green-700",
 };
-
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
 
 const priorities = ["low", "medium", "high", "critical"];
 const DEPARTMENTS = ["Public Works", "Sanitation", "Electrical", "Water Supply", "Parks", "Traffic", "Drainage", "General Administration"];
@@ -652,12 +651,7 @@ ${activeReports.slice(0, 10).map((r, i) => `${i + 1}. [${r.severity.toUpperCase(
                   setLoadingInsights(true);
                   const prompt = `You are a city analytics AI. Analyze this civic issue data and provide actionable insights:\n\nTotal: ${total}\nResolved: ${resolved}\nPending: ${pending}\nIn Progress: ${inProgress}\nCritical: ${critical}\nBy Category: ${JSON.stringify(byCategory)}\nBy Department: ${JSON.stringify(byDepartment)}\nBy Ward: ${JSON.stringify(byWard)}\n\nProvide 3-5 actionable insights for city officials in a professional tone.`;
                   try {
-                    const response = await fetch(GEMINI_API_URL, {
-                      method: "POST", headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-                    });
-                    const data = await response.json();
-                    setAiInsights(data.candidates?.[0]?.content?.parts?.[0]?.text || "No insights generated");
+                    setAiInsights(await generateAIText(prompt) || "No insights generated");
                   } catch { setAiInsights("AI insights temporarily unavailable"); }
                   setLoadingInsights(false);
                 }} disabled={loadingInsights}>

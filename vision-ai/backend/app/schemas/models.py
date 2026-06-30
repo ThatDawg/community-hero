@@ -60,14 +60,11 @@ class AnalyzeResponse(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     context: Optional[str] = None
+    system_prompt: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
     response: str
-
-
-class VoiceResponse(BaseModel):
-    text: str
 
 
 class ProgressSummaryRequest(BaseModel):

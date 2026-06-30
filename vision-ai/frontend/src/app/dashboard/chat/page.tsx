@@ -5,9 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mic, Send, Bot, User, Loader2, Languages } from "lucide-react";
-import { chatWithAI, transcribeVoice } from "@/lib/api";
-
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`;
+import { chatWithAI } from "@/lib/api";
 
 const SYSTEM_PROMPT = `You are Vision AI, a helpful assistant for a civic issue reporting platform.
 You help citizens report issues, check status, and provide information about local government services.
@@ -74,16 +72,9 @@ export default function ChatPage() {
     try {
       const result = await chatWithAI(userMessage, SYSTEM_PROMPT + langInstruction);
       return result.response;
-    } catch {
-      const response = await fetch(GEMINI_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `${SYSTEM_PROMPT}${langInstruction}\n\nUser: ${userMessage}` }] }],
-        }),
-      });
-      const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
+    } catch (error) {
+      console.error("AI chat failed:", error);
+      return "AI chat is temporarily unavailable. Please check that the backend URL is configured and running.";
     }
   };
 
@@ -129,7 +120,7 @@ export default function ChatPage() {
       : null;
 
     if (!SpeechRecognitionAPI) {
-      startRecording();
+      console.error("Speech recognition is not supported in this browser");
       return;
     }
 
@@ -152,7 +143,7 @@ export default function ChatPage() {
 
     (recognition as { onerror: () => void }).onerror = () => {
       setRecording(false);
-      startRecording();
+      console.error("Speech recognition failed");
     };
 
     recognitionRef.current = recognition;
@@ -165,41 +156,6 @@ export default function ChatPage() {
       (recognitionRef.current as { stop: () => void }).stop();
     }
     setRecording(false);
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-      mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        setRecording(false);
-
-        try {
-          const audioBlob = new Blob(chunks, { type: "audio/webm" });
-          const result = await transcribeVoice(audioBlob);
-          if (result.text) {
-            setInput(result.text);
-          }
-        } catch {
-          console.error("Voice transcription unavailable");
-        }
-      };
-
-      mediaRecorder.start();
-      setRecording(true);
-
-      setTimeout(() => {
-        if (mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-        }
-      }, 30000);
-    } catch {
-      console.error("Microphone access denied");
-    }
   };
 
   return (
