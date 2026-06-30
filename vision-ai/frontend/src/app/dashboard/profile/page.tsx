@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/firebase-context";
 import { getUserReports } from "@/lib/firestore";
-import { User, FileText, CheckCircle, Clock, Star } from "lucide-react";
+import { User, FileText, CheckCircle, Star } from "lucide-react";
 
 export default function ProfilePage() {
   const { user } = useAuth();

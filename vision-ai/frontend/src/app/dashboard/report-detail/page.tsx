@@ -74,7 +74,7 @@ export default function ReportDetailPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(reportId));
   const [upvoted, setUpvoted] = useState(false);
   const [verified, setVerified] = useState(false);
   const [translatedDesc, setTranslatedDesc] = useState("");
@@ -93,7 +93,7 @@ export default function ReportDetailPage() {
   const canEdit = user && report && user.uid === report.user_id && report.status === "reported";
 
   useEffect(() => {
-    if (!reportId) { setLoading(false); return; }
+    if (!reportId) return;
     getReport(reportId).then((data) => {
       setReport(data as Report);
       setLoading(false);
@@ -294,10 +294,6 @@ export default function ReportDetailPage() {
     );
   }
 
-  const timeSinceReport = report.created_at
-    ? Math.floor((Date.now() - new Date(report.created_at).getTime()) / 3600000)
-    : 0;
-
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -378,9 +374,6 @@ export default function ReportDetailPage() {
                 <>
                   <CardTitle className="text-xl">{report.title}</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">Reported by {report.user_name}</p>
-                  {timeSinceReport > 0 && (
-                    <p className="text-xs text-muted-foreground">Reported {timeSinceReport}h ago</p>
-                  )}
                 </>
               )}
             </div>
@@ -396,6 +389,7 @@ export default function ReportDetailPage() {
           <CardContent className="space-y-4">
             {report.image_url && (
               <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={report.image_url} alt="Issue" className="w-full rounded-lg max-h-96 object-cover" />
                 <div className="absolute top-2 right-2">
                   <Badge variant="secondary" className="bg-black/50 text-white border-0">YOLO Detection</Badge>

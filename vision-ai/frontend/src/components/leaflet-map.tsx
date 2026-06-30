@@ -45,14 +45,14 @@ export default function LeafletMap({ reports, showHeatmap = false, center, zoom,
   const mapInstanceRef = useRef<L.Map | null>(null);
   const heatLayerRef = useRef<L.Layer | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
+  const centerLat = center?.[0] ?? 28.6139;
+  const centerLng = center?.[1] ?? 77.209;
+  const mapZoom = zoom ?? 12;
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    const defaultCenter: [number, number] = center || [28.6139, 77.209];
-    const defaultZoom = zoom || 12;
-
-    const map = L.map(mapRef.current).setView(defaultCenter, defaultZoom);
+    const map = L.map(mapRef.current).setView([centerLat, centerLng], mapZoom);
     mapInstanceRef.current = map;
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -63,7 +63,7 @@ export default function LeafletMap({ reports, showHeatmap = false, center, zoom,
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, []);
+  }, [centerLat, centerLng, mapZoom]);
 
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -85,8 +85,6 @@ export default function LeafletMap({ reports, showHeatmap = false, center, zoom,
       }));
 
       const bounds = map.getBounds();
-      const ne = bounds.getNorthEast();
-      const sw = bounds.getSouthWest();
       const heatCanvas = document.createElement("canvas");
       heatCanvas.width = 256;
       heatCanvas.height = 256;

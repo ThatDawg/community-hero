@@ -6,11 +6,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { signOut } from "firebase/auth";
+import { signOut, type User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { requestNotificationPermission, onForegroundMessage } from "@/lib/notifications";
 import { doc, getDoc } from "firebase/firestore";
 import { useTheme } from "next-themes";
+import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -34,6 +35,98 @@ import {
   Sun,
 } from "lucide-react";
 import { toast } from "sonner";
+
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+};
+
+type SidebarContentProps = {
+  navItems: NavItem[];
+  user: FirebaseUser;
+  theme?: string;
+  setTheme: (theme: string) => void;
+  onClose: () => void;
+  onSignOut: () => void;
+};
+
+function SidebarContent({
+  navItems,
+  user,
+  theme,
+  setTheme,
+  onClose,
+  onSignOut,
+}: SidebarContentProps) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="border-b p-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">Vision AI</h1>
+          <p className="text-xs text-muted-foreground">Civic Issue Platform</p>
+        </div>
+        <button className="lg:hidden p-1" onClick={onClose}>
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      <nav className="flex-1 space-y-1 p-2">
+        {navItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onClose}
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="border-t p-4">
+        <Link
+          href="/dashboard/profile"
+          onClick={onClose}
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <User className="h-4 w-4" />
+          Profile
+        </Link>
+        <div className="flex items-center gap-3 mt-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
+            <User className="h-4 w-4" />
+          </div>
+          <div className="flex-1 truncate">
+            <p className="text-sm font-medium truncate">
+              {user.displayName || user.email}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {user.email}
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-2"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {theme === "dark" ? "Light Mode" : "Dark Mode"}
+        </Button>
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-2"
+          onClick={onSignOut}
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -78,7 +171,7 @@ export default function DashboardLayout({
     toast.info("Signed out successfully");
   };
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/report", label: "New Report", icon: PlusCircle },
     { href: "/dashboard/map", label: "Live Map", icon: Map },
@@ -101,93 +194,39 @@ export default function DashboardLayout({
       : []),
     ...(userRole === "admin"
       ? [
-          { href: "/dashboard/verification", label: "Verification", icon: ClipboardCheck },
-          { href: "/dashboard/departments", label: "Departments", icon: Building2 },
           { href: "/dashboard/users", label: "User Management", icon: Users },
           { href: "/dashboard/settings", label: "Settings", icon: Settings },
         ]
       : []),
   ];
 
-  const SidebarContent = () => (
-    <div className="flex h-full flex-col">
-      <div className="border-b p-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">Vision AI</h1>
-          <p className="text-xs text-muted-foreground">Civic Issue Platform</p>
-        </div>
-        <button className="lg:hidden p-1" onClick={() => setSidebarOpen(false)}>
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      <nav className="flex-1 space-y-1 p-2">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setSidebarOpen(false)}
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-
-      <div className="border-t p-4">
-        <Link
-          href="/dashboard/profile"
-          onClick={() => setSidebarOpen(false)}
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
-          <User className="h-4 w-4" />
-          Profile
-        </Link>
-        <div className="flex items-center gap-3 mt-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
-            <User className="h-4 w-4" />
-          </div>
-          <div className="flex-1 truncate">
-            <p className="text-sm font-medium truncate">
-              {user.displayName || user.email}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user.email}
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          {theme === "dark" ? "Light Mode" : "Dark Mode"}
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2"
-          onClick={handleSignOut}
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </Button>
-      </div>
-    </div>
-  );
+  const closeSidebar = () => setSidebarOpen(false);
 
   return (
     <div className="flex h-screen bg-background">
       <aside className="hidden w-64 border-r bg-card lg:block">
-        <SidebarContent />
+        <SidebarContent
+          navItems={navItems}
+          user={user}
+          theme={theme}
+          setTheme={setTheme}
+          onClose={closeSidebar}
+          onSignOut={handleSignOut}
+        />
       </aside>
 
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
           <aside className="fixed inset-y-0 left-0 w-64 bg-card z-50">
-            <SidebarContent />
+            <SidebarContent
+              navItems={navItems}
+              user={user}
+              theme={theme}
+              setTheme={setTheme}
+              onClose={closeSidebar}
+              onSignOut={handleSignOut}
+            />
           </aside>
         </div>
       )}

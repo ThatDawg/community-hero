@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Search, Ban, CheckCircle, ShieldAlert, RotateCcw, UserX } from "lucide-react";
+import { Users, Search, Ban, CheckCircle, RotateCcw, UserX } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import ConfirmDialog from "@/components/confirm-dialog";

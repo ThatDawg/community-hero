@@ -25,13 +25,6 @@ const fadeUp = {
   transition: { duration: 0.5 },
 };
 
-const stagger = {
-  initial: { opacity: 0, y: 20 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true },
-  transition: { staggerChildren: 0.1, duration: 0.4 },
-};
-
 export default function Home() {
   const features = [
     {

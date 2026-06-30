@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/firebase-context";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc, increment } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, updateDoc, setDoc, increment } from "firebase/firestore";
 import { HandHelping, MapPin, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,7 +31,6 @@ export default function VolunteerPage() {
   const [assignedReports, setAssignedReports] = useState<Report[]>([]);
   const [availableReports, setAvailableReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
-  const [specialties, setSpecialties] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -55,12 +54,6 @@ export default function VolunteerPage() {
         .filter((r) => !r.assigned_volunteer || r.assigned_volunteer === "");
       setAvailableReports(unassigned);
     });
-
-    getDoc(doc(db, "users", user.uid)).then((snap) => {
-      if (snap.exists()) {
-        setSpecialties(snap.data().specialties || []);
-      }
-    }).catch(() => {});
 
     return () => { assignedUnsub(); availableUnsub(); };
   }, [user]);

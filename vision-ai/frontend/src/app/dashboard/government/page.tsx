@@ -9,7 +9,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line,
 } from "recharts";
-import { Shield, AlertTriangle, CheckCircle, Clock, TrendingUp, FileText, Download, Merge, Bell, RefreshCw, Trash2, Archive, RotateCcw, Users, Brain, MapPin, Edit } from "lucide-react";
+import { Shield, Download, Merge, Bell, RefreshCw, Trash2, Archive, RotateCcw, Users, Brain, MapPin, Edit } from "lucide-react";
 import { getAllReports } from "@/lib/firestore";
 import { db, storage } from "@/lib/firebase";
 import { useAuth } from "@/lib/firebase-context";
@@ -97,7 +97,6 @@ export default function GovernmentPage() {
   const [beforeFile, setBeforeFile] = useState<File | null>(null);
   const [afterFile, setAfterFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [assignDeptId, setAssignDeptId] = useState("");
   const [editTargetId, setEditTargetId] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -110,12 +109,8 @@ export default function GovernmentPage() {
       setLoading(false);
     }).catch(() => setLoading(false));
     if (user) {
-      import("@/lib/firebase").then(({ db }) => {
-        import("firebase/firestore").then(({ getDoc, doc }) => {
-          getDoc(doc(db, "users", user.uid)).then((snap) => {
-            if (snap.exists()) setUserRole(snap.data().role || "citizen");
-          });
-        });
+      getDoc(doc(db, "users", user.uid)).then((snap) => {
+        if (snap.exists()) setUserRole(snap.data().role || "citizen");
       });
     }
   }, [user]);
@@ -138,7 +133,7 @@ export default function GovernmentPage() {
   const byPriority = activeReports.reduce((acc, r) => { const p = r.priority || "unset"; acc[p] = (acc[p] || 0) + 1; return acc; }, {} as Record<string, number>);
 
   const categoryData = Object.entries(byCategory).map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
-  const departmentData = Object.entries(byDepartment).map(([name, value]) => ({
+  const departmentData = Object.entries(byDepartment).map(([name]) => ({
     name, pending: activeReports.filter((r) => (r.department || "Unassigned") === name && r.status !== "resolved").length,
     resolved: activeReports.filter((r) => (r.department || "Unassigned") === name && r.status === "resolved").length,
   }));
@@ -210,7 +205,6 @@ ${activeReports.slice(0, 10).map((r, i) => `${i + 1}. [${r.severity.toUpperCase(
   const updateDepartment = async (reportId: string, department: string) => {
     await updateDoc(doc(db, "reports", reportId), { department });
     setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, department } : r));
-    setAssignDeptId("");
     toast.success("Department assigned");
   };
 
@@ -231,7 +225,9 @@ ${activeReports.slice(0, 10).map((r, i) => `${i + 1}. [${r.severity.toUpperCase(
         await uploadBytes(afterRef, afterFile);
         updateData.photos_after = [await getDownloadURL(afterRef)];
       }
-    } catch {}
+    } catch (e) {
+      console.error("Photo upload failed:", e);
+    }
     await updateDoc(doc(db, "reports", reportId), updateData);
     setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, ...updateData } as Report : r));
     toast.success("Report resolved with photo");
@@ -278,7 +274,6 @@ ${activeReports.slice(0, 10).map((r, i) => `${i + 1}. [${r.severity.toUpperCase(
         }
       } else if (broadcastScope === "nearby") {
         const allUsers = (await getDocs(collection(db, "users"))).docs;
-        const userLoc = user?.uid ? (await getDoc(doc(db, "reports", "placeholder"))).data() : null;
         const refLat = 28.6139;
         const refLng = 77.209;
         const radiusKm = 10;

@@ -175,7 +175,7 @@ export default function ReportPage() {
         imageUrl = await getDownloadURL(snapshot.ref);
       }
 
-      const reportId = await createReport({
+      await createReport({
         title: aiResult?.title || description.slice(0, 50),
         description,
         category: aiResult?.category || "other",

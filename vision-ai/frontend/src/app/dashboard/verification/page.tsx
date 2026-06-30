@@ -5,10 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { ShieldCheck, CheckCircle, XCircle, Info, MapPin } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, addDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, addDoc } from "firebase/firestore";
 
 interface Report {
   id: string;
