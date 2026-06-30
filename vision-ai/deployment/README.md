@@ -31,24 +31,33 @@ curl https://your-service.onrender.com/health
 
 ## Frontend (Firebase Hosting)
 
-Set the backend URL before building:
+Firebase Hosting serves the static Next.js export from `frontend/out`. The root `firebase.json` includes a Hosting `predeploy` hook, so this deploy command rebuilds the frontend automatically before upload.
+
+Create `frontend/.env.local` first:
 
 ```bash
-cd vision-ai/frontend
-npm ci
-NEXT_PUBLIC_BACKEND_URL=https://your-service.onrender.com npm run build
-cd ..
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=community-hero-500915.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=community-hero-500915
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=community-hero-500915.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+NEXT_PUBLIC_BACKEND_URL=https://your-service.onrender.com
+```
+
+Then deploy:
+
+```bash
+cd vision-ai
+npm --prefix frontend ci
 firebase deploy --only hosting --project community-hero-500915
 ```
 
 On Windows PowerShell:
 
 ```powershell
-cd vision-ai/frontend
-npm.cmd ci
-$env:NEXT_PUBLIC_BACKEND_URL="https://your-service.onrender.com"
-npm.cmd run build
-cd ..
+cd vision-ai
+npm.cmd --prefix frontend ci
 firebase deploy --only hosting --project community-hero-500915
 ```
 

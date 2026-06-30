@@ -1,6 +1,9 @@
 {
   "hosting": {
     "public": "frontend/out",
+    "predeploy": [
+      "npm --prefix frontend run build"
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -13,6 +16,15 @@
       }
     ],
     "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
       {
         "source": "**/*.@(js|css)",
         "headers": [
