@@ -22,6 +22,9 @@ import {
   Trophy,
   FileText,
   Shield,
+  ShieldCheck,
+  Users,
+  Settings,
   Menu,
   X,
 } from "lucide-react";
@@ -80,7 +83,13 @@ export default function DashboardLayout({
       ? [{ href: "/dashboard/volunteer", label: "Volunteer", icon: Shield }]
       : []),
     ...(userRole === "official" || userRole === "admin"
-      ? [{ href: "/dashboard/government", label: "Official View", icon: Shield }]
+      ? [{ href: "/dashboard/government", label: "Municipal Dashboard", icon: ShieldCheck }]
+      : []),
+    ...(userRole === "admin"
+      ? [
+          { href: "/dashboard/users", label: "User Management", icon: Users },
+          { href: "/dashboard/settings", label: "Settings", icon: Settings },
+        ]
       : []),
   ];
 

@@ -138,8 +138,8 @@ ${reports.slice(0, 10).map((r, i) => `${i + 1}. [${r.severity.toUpperCase()}] ${
         <div className="flex items-center gap-3">
           <Shield className="h-6 w-6 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">Government Dashboard</h1>
-            <p className="text-muted-foreground">Manage and resolve civic issues</p>
+            <h1 className="text-2xl font-bold">Municipal Dashboard</h1>
+            <p className="text-muted-foreground">Manage and resolve civic issues across the city</p>
           </div>
         </div>
         <Button onClick={generateOfficialReport} disabled={generatingReport}>
