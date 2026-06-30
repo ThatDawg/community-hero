@@ -1,7 +1,8 @@
 import google.generativeai as genai
 from PIL import Image
 from typing import List, Dict, Optional
-from utils.config import GOOGLE_API_KEY
+from app.utils.config import GOOGLE_API_KEY
+from app.ai.prompts import ANALYZE_PROMPT, CHAT_SYSTEM_PROMPT, DUPLICATE_PROMPT, SUMMARY_PROMPT
 import json
 
 genai.configure(api_key=GOOGLE_API_KEY)
@@ -18,27 +19,11 @@ def analyze_with_gemini(
         [f"- {d['category']} (confidence: {d['confidence']}, severity: {d['severity']})" for d in detections]
     ) if detections else "No image detection results available."
 
-    prompt = f"""You are an AI assistant for a civic issue reporting system. Analyze the following report and provide structured output.
-
-Image Detection Results:
-{detection_text}
-
-Citizen Description: {description}
-Location: {location}
-
-Provide a JSON response with these fields:
-{{
-    "title": "Brief issue title",
-    "description": "Detailed issue description",
-    "department": "Responsible department (Public Works, Sanitation, Electrical, Water, Parks, Traffic)",
-    "priority": "critical/high/medium/low",
-    "estimatedResolution": "Estimated time to resolve",
-    "suggestedAction": "Recommended immediate action",
-    "citizenSummary": "Friendly summary for the citizen",
-    "rootCause": "Potential root cause analysis"
-}}
-
-Respond ONLY with valid JSON."""
+    prompt = ANALYZE_PROMPT.format(
+        detection_text=detection_text,
+        description=description,
+        location=location,
+    )
 
     content = [prompt]
     if image:
@@ -65,18 +50,8 @@ Respond ONLY with valid JSON."""
 
 
 def chat_with_gemini(message: str, context: Optional[str] = None) -> str:
-    system_prompt = """You are Vision AI, a helpful assistant for a civic issue reporting platform.
-You help citizens report issues, check status, and provide information about local government services.
-Be helpful, concise, and friendly. If asked about a specific issue, provide relevant details."""
-
-    if context:
-        full_prompt = f"Context: {context}\n\nUser: {message}"
-    else:
-        full_prompt = message
-
-    response = model.generate_content(
-        f"{system_prompt}\n\n{full_prompt}"
-    )
+    full_prompt = f"Context: {context}\n\nUser: {message}" if context else message
+    response = model.generate_content(f"{CHAT_SYSTEM_PROMPT}\n\n{full_prompt}")
     return response.text
 
 
@@ -88,17 +63,11 @@ def detect_duplicates(new_description: str, new_location: str, existing_reports:
         [f"- ID: {r['id']}, Title: {r['title']}, Location: {r['address']}" for r in existing_reports[:10]]
     )
 
-    prompt = f"""Check if this new issue report is a duplicate of any existing reports.
-
-New Report:
-Description: {new_description}
-Location: {new_location}
-
-Existing Reports:
-{reports_text}
-
-If a duplicate is found, respond with ONLY the report ID.
-If no duplicate, respond with ONLY "none"."""
+    prompt = DUPLICATE_PROMPT.format(
+        new_description=new_description,
+        new_location=new_location,
+        reports_text=reports_text,
+    )
 
     response = model.generate_content(prompt)
     result = response.text.strip().lower()
@@ -117,22 +86,13 @@ def generate_progress_summary(
 ) -> str:
     comments_text = "\n".join([f"- {c}" for c in comments]) if comments else "No comments yet."
 
-    prompt = f"""Generate a professional progress summary for this civic issue report for government officials.
-
-Report ID: {report_id}
-Title: {title}
-Current Status: {status}
-Assigned Department: {department}
-Comments:
-{comments_text}
-
-Provide a brief, professional summary covering:
-1. Current status and next steps
-2. Department action required
-3. Estimated timeline
-4. Any risks or blockers
-
-Keep it concise and actionable."""
+    prompt = SUMMARY_PROMPT.format(
+        report_id=report_id,
+        title=title,
+        status=status,
+        department=department,
+        comments_text=comments_text,
+    )
 
     response = model.generate_content(prompt)
     return response.text.strip()

@@ -2,131 +2,113 @@
 
 > AI-powered platform for citizens to report, track, and resolve community issues through collaboration, data, and intelligent automation.
 
-## Live Demo
+## Problem Statement
 
-- **Frontend:** https://community-hero-500915.web.app/
-- **GitHub:** https://github.com/ThatDawg/community-hero
+Civic issues like potholes, garbage accumulation, broken streetlights, and water leakage often go unreported or take weeks to resolve. Citizens lack a simple way to report problems, and government departments lack real-time visibility into issue distribution and resolution progress.
 
-## Project Structure
-
-```
-vision-ai/
-├── frontend/              # Next.js 15 + TypeScript (Static Export)
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── page.tsx                    # Landing page
-│   │   │   ├── auth/page.tsx               # Auth (Google + Email, role selection)
-│   │   │   └── dashboard/
-│   │   │       ├── page.tsx                # Dashboard home
-│   │   │       ├── report/page.tsx         # Report submission with AI analysis
-│   │   │       ├── report-detail/page.tsx  # Report detail, comments, verify
-│   │   │       ├── map/page.tsx            # Leaflet heatmap + nearby filter
-│   │   │       ├── chat/page.tsx           # AI chatbot with voice + translation
-│   │   │       ├── analytics/page.tsx      # Analytics with Gemini insights
-│   │   │       ├── my-reports/page.tsx     # User's reports
-│   │   │       ├── notifications/page.tsx  # Real-time notifications
-│   │   │       ├── leaderboard/page.tsx    # Gamification
-│   │   │       ├── government/page.tsx     # Official dashboard
-│   │   │       ├── volunteer/page.tsx      # Volunteer task management
-│   │   │       └── profile/page.tsx        # User profile
-│   │   ├── components/
-│   │   │   └── leaflet-map.tsx             # Leaflet map component
-│   │   └── lib/
-│   │       ├── firebase.ts                 # Firebase init
-│   │       ├── firebase-context.tsx        # Auth context provider
-│   │       ├── firestore.ts                # Firestore CRUD
-│   │       ├── api.ts                      # FastAPI client
-│   │       └── notifications.ts            # FCM + notifications
-│   └── .env.local                          # Firebase + Gemini keys (gitignored)
-├── backend/               # FastAPI backend for Cloud Run
-│   ├── main.py                           # API endpoints
-│   ├── models/schemas.py                 # Pydantic models
-│   └── services/
-│       ├── yolo_service.py               # YOLO detection (9 categories)
-│       └── gemini_service.py             # Gemini analysis + chat
-├── yolo-models/
-│   └── train.py                          # Custom YOLO training script
-├── firebase.json                         # Firebase Hosting config
-├── firestore.rules                       # Firestore security rules
-├── Dockerfile                            # Backend Docker image
-└── cloudbuild.yaml                       # Cloud Build CI/CD
-```
+**Vision AI** solves this by combining AI-powered image analysis, community verification, and real-time dashboards to streamline the entire civic issue lifecycle.
 
 ## Features
 
-### Citizen Features
-- **Report Issues** — Upload photo, AI auto-categorizes with YOLO, Gemini analyzes root cause + department
-- **Live Map** — Leaflet heatmap, severity/category filters, nearby issues (1-25km radius)
-- **AI Chatbot** — Voice dictation (Web Speech API), 12-language translation, follow-up questions
-- **Notifications** — Real-time FCM alerts for report updates, nearby issues, verifications
-- **Gamification** — Points, badges, leaderboard, level progression
-- **Community Verification** — 3-verifier threshold before government action
+### For Citizens
+- **One-Tap Reporting** — Upload a photo, AI auto-categorizes and routes to the right department
+- **Real-Time Tracking** — Monitor your report status from submission to resolution
+- **AI Chatbot** — Voice-enabled assistant with 12-language translation
+- **Gamification** — Earn points, badges, and climb the leaderboard
+- **Community Verification** — 3-verifier threshold ensures quality reports
 
-### Volunteer Features
-- Claim and manage assigned issues
-- Available issues queue
-- Resolve assigned issues
-- Role-based dashboard view
+### For Volunteers
+- **Claim Issues** — Browse and claim nearby issues to resolve
+- **Task Management** — Track assigned issues through completion
+- **Impact Dashboard** — See your contribution to the community
 
-### Government/Official Features
-- **Status Management** — Start/resolve issues, assign departments
-- **Analytics** — Gemini-generated insights, charts, department breakdowns
-- **Export Reports** — Download JSON with Gemini-formatted summaries
-- **Progress Summaries** — AI-generated reports for officials
-- **Real-time Data** — Live Firestore updates
+### For Government Officials
+- **Live Dashboard** — Real-time view of all issues with status management
+- **AI Analytics** — Gemini-powered insights and trend analysis
+- **Department Routing** — Automatic assignment to Public Works, Sanitation, Electrical, etc.
+- **Export Reports** — Download structured reports with AI-generated summaries
+- **Heatmap View** — Visualize issue density across the city
 
-## Tech Stack
+## AI Architecture
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 15, React, TypeScript, Tailwind CSS, Shadcn UI, Framer Motion |
-| Backend | FastAPI (Python), YOLO (Ultralytics), Gemini 2.5 Flash |
-| Database | Firebase Firestore |
-| Auth | Firebase Authentication (Google + Email) |
-| Storage | Firebase Storage (images) |
-| Maps | Leaflet + OpenStreetMap (free, no API billing) |
-| Notifications | Firebase Cloud Messaging |
-| Voice | Web Speech API (browser) + Whisper (backend) |
-| Hosting | Firebase Hosting (static export) |
-| Backend Deploy | Google Cloud Run |
+```
+┌─────────────────────────────────────────────────────────┐
+│                    AI PIPELINE                           │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  Image ──→ YOLO v8 ──→ 9 Civic Categories               │
+│           │              (pothole, garbage, etc.)        │
+│           │                                              │
+│           ▼                                              │
+│  Gemini 2.5 Flash ──→ Title, Department, Priority        │
+│           │              Root Cause, Actions             │
+│           │                                              │
+│           ▼                                              │
+│  Duplicate Detection ──→ Compares with existing          │
+│           │              reports using Gemini             │
+│           │                                              │
+│           ▼                                              │
+│  Whisper (Optional) ──→ Voice transcription              │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### AI Services
+| Service | Model | Purpose |
+|---------|-------|---------|
+| Image Detection | YOLO v8 | Detect potholes, garbage, streetlights, etc. |
+| Analysis | Gemini 2.5 Flash | Generate title, department, priority, root cause |
+| Duplicate Check | Gemini 2.5 Flash | Prevent duplicate reports |
+| Chatbot | Gemini 2.5 Flash | Citizen assistance with context |
+| Voice | Whisper (base) | Transcribe voice reports |
+| Progress Summary | Gemini 2.5 Flash | Generate official reports |
 
 ## Google Technologies Used
-- **Gemini 2.5 Flash** — Issue categorization, chatbot, root cause analysis, progress summaries, translations, duplicate detection, leaderboard computation, analytics insights
-- **Firebase Authentication** — Google + email/password, role-based (citizen/volunteer/official/admin)
-- **Firebase Firestore** — Real-time database with subcollections (comments, verifications, notifications)
-- **Firebase Storage** — Issue photo uploads
-- **Firebase Cloud Messaging** — Real-time push notifications
-- **Firebase Hosting** — Static export deployment
-- **Google Cloud Run** — Backend API deployment
-- **Google Cloud Build** — CI/CD pipeline
-- **Google Cloud Logging** — Backend observability
-- **Google Cloud Firestore** — Security rules for all collections
 
-## Setup Instructions
+| Technology | Usage |
+|------------|-------|
+| **Gemini 2.5 Flash** | Issue analysis, chatbot, duplicate detection, progress summaries, translations |
+| **Firebase Authentication** | Google + email/password, role-based access |
+| **Firebase Firestore** | Real-time database with subcollections |
+| **Firebase Storage** | Issue photo uploads |
+| **Firebase Cloud Messaging** | Push notifications |
+| **Firebase Hosting** | Static frontend deployment |
+| **Google Cloud Run** | Backend API deployment |
+| **Google Cloud Build** | CI/CD pipeline |
+| **Google Cloud Logging** | Backend observability |
+
+## Screenshots
+
+> Screenshots available in `docs/screenshots/`
+
+| Page | Description |
+|------|-------------|
+| Landing | Hero section with platform overview |
+| Auth | Google/email login with role selection |
+| Dashboard | Stats, recent activity, quick actions |
+| Report | Photo upload with AI analysis |
+| Map | Leaflet heatmap with filters |
+| Chatbot | AI assistant with voice input |
+| Analytics | Charts and Gemini insights |
+| Government | Official dashboard with status management |
+| Volunteer | Task queue and issue management |
+
+## Installation
 
 ### Prerequisites
 - Node.js 18+
 - Python 3.10+
 - Firebase CLI (`npm install -g firebase-tools`)
-- Google Cloud SDK (for Cloud Run deployment)
+- Google Cloud SDK (for Cloud Run)
 
 ### Frontend Setup
 ```bash
 cd vision-ai/frontend
 npm install
 
-# Create .env.local
-cat > .env.local << 'EOF'
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyClXp-1dmVKaYPd8J2sdiIFexHKxhZ_Nvg
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=community-hero-500915.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=community-hero-500915
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=community-hero-500915.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=1077028013372
-NEXT_PUBLIC_FIREBASE_APP_ID=1:1077028013372:web:b88c8464dfb74cb669ca39
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
-NEXT_PUBLIC_GEMINI_API_KEY=YOUR_GEMINI_KEY
-NEXT_PUBLIC_FASTAPI_URL=http://localhost:8000
-EOF
+# Copy and configure environment variables
+cp .env.example .env.local
+# Edit .env.local with your Firebase and Gemini keys
 
 npm run dev
 ```
@@ -136,82 +118,149 @@ npm run dev
 cd vision-ai/backend
 pip install -r requirements.txt
 
-# Set Gemini API key
-export GEMINI_API_KEY=your_key_here
+# Copy and configure environment variables
+cp .env.example .env
+# Edit .env with your API keys
 
-python main.py
-# Backend runs on http://localhost:8000
+python -m app.main
 ```
 
-### Firebase Deployment
+### Firebase Setup
+1. Create a Firebase project at https://console.firebase.google.com
+2. Enable Authentication (Google + Email)
+3. Create Firestore database
+4. Enable Storage
+5. Enable Cloud Messaging
+6. Copy config to `.env.local`
+
+## Deployment
+
+### Frontend (Firebase Hosting)
 ```bash
-cd vision-ai
-
-# Login
-firebase login
-
-# Deploy hosting + Firestore rules
+cd vision-ai/frontend
+npm run build
+cd ..
 firebase deploy --only hosting,firestore:rules
 ```
 
-### Backend Deployment (Cloud Run)
+### Backend (Google Cloud Run)
 ```bash
 cd vision-ai
-gcloud run deploy vision-ai-backend --source . --region us-central1 --allow-unauthenticated
+gcloud run deploy vision-ai-backend \
+  --source . \
+  --region us-central1 \
+  --allow-unauthenticated
 ```
 
-## Environment Variables
+### Docker
+```bash
+cd vision-ai
+docker build -t vision-ai-backend .
+docker run -p 8000:8000 vision-ai-backend
+```
 
-### Frontend (.env.local)
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_FIREBASE_*` | Firebase config (auto-generated from Firebase Console) |
-| `NEXT_PUBLIC_GEMINI_API_KEY` | Google Gemini API key |
-| `NEXT_PUBLIC_FASTAPI_URL` | Backend URL (default: http://localhost:8000) |
+## Folder Structure
 
-### Backend
-| Variable | Description |
-|----------|-------------|
-| `GEMINI_API_KEY` | Google Gemini API key |
+```
+community-hero/
+├── README.md                    # This file
+├── LICENSE                      # MIT License
+├── .gitignore                   # Git ignore rules
+├── Dockerfile                   # Backend Docker config
+├── cloudbuild.yaml              # Google Cloud Build CI/CD
+├── firebase.json                # Firebase Hosting config
+├── firestore.rules              # Firestore security rules
+├── storage.rules                # Storage security rules
+│
+├── frontend/                    # Next.js 15 Frontend
+│   ├── src/
+│   │   ├── app/                 # Pages (17 routes)
+│   │   │   ├── page.tsx         # Landing page
+│   │   │   ├── auth/            # Authentication
+│   │   │   └── dashboard/       # Main dashboard
+│   │   │       ├── page.tsx     # Home
+│   │   │       ├── report/      # Report submission
+│   │   │       ├── map/         # Live map
+│   │   │       ├── chat/        # AI chatbot
+│   │   │       ├── analytics/   # Analytics
+│   │   │       ├── government/  # Official view
+│   │   │       ├── volunteer/   # Volunteer tasks
+│   │   │       └── ...
+│   │   ├── components/          # Reusable UI components
+│   │   └── lib/                 # Firebase, API, utilities
+│   ├── .env.example             # Environment template
+│   └── package.json
+│
+├── backend/                     # FastAPI Backend
+│   ├── app/
+│   │   ├── main.py              # FastAPI app entry
+│   │   ├── ai/                  # AI services
+│   │   │   ├── gemini.py        # Gemini integration
+│   │   │   ├── yolo.py          # YOLO detection
+│   │   │   └── prompts.py       # Prompt templates
+│   │   ├── routers/             # API routes
+│   │   │   └── routes.py        # All endpoints
+│   │   ├── schemas/             # Pydantic models
+│   │   │   └── models.py        # Request/response models
+│   │   ├── database/            # Firebase integration
+│   │   │   └── firebase.py      # Firestore client
+│   │   └── utils/               # Config and helpers
+│   │       └── config.py        # Environment variables
+│   ├── requirements.txt         # Python dependencies
+│   ├── .env.example             # Environment template
+│   └── Dockerfile               # Docker config
+│
+├── yolo-models/                 # YOLO training
+│   └── train.py                 # Custom model training
+│
+├── docs/                        # Documentation
+│   ├── architecture.md          # System architecture
+│   └── screenshots/             # UI screenshots
+│
+└── deployment/                  # Deployment guides
+    └── README.md                # Deployment instructions
+```
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/analyze` | YOLO detection + Gemini analysis |
-| POST | `/api/chat` | AI chatbot conversation |
-| POST | `/api/voice` | Whisper voice transcription |
-| POST | `/api/summary` | AI progress summary for officials |
-| POST | `/api/analytics` | Analytics data with Gemini insights |
-| POST | `/api/heatmap` | Heatmap data for map |
+| POST | `/api/analyze` | YOLO + Gemini analysis |
+| POST | `/api/chat` | AI chatbot |
+| POST | `/api/voice` | Voice transcription |
+| POST | `/api/summary` | Progress summary |
+| GET | `/api/analytics` | Analytics data |
+| GET | `/api/heatmap` | Heatmap data |
+| GET | `/health` | Health check |
 
-## YOLO Model Training
-```bash
-cd vision-ai
-python yolo-models/train.py --data dataset.yaml --epochs 100 --model yolov8n.pt
-```
+## YOLO Categories
 
-Categories: pothole, garbage, streetlight, water_leakage, road_damage, traffic_signal, construction, flooding, fire
+The YOLO model detects 9 civic issue categories:
 
-## Firestore Security Rules
-
-All collections require authentication. Rules cover:
-- `users/{userId}` — Profile data, roles, points
-- `reports/{reportId}` — Issue reports with subcollections
-- `reports/{reportId}/comments/{commentId}` — Comments
-- `reports/{reportId}/verifications/{verificationId}` — Community verification
-- `notifications/{notificationId}` — Push notifications
-- `leaderboard/{entryId}` — Gamification entries
-- `volunteers/{volunteerId}` — Volunteer task management
+| ID | Category | Severity |
+|----|----------|----------|
+| 0 | Pothole | High |
+| 1 | Garbage | Medium |
+| 2 | Overflowing Bin | Medium |
+| 3 | Broken Streetlight | Medium |
+| 4 | Water Leakage | High |
+| 5 | Fallen Tree | Critical |
+| 6 | Road Crack | Medium |
+| 7 | Illegal Dumping | High |
+| 8 | Open Manhole | Critical |
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/feature-name`)
-3. Commit changes (`git commit -m 'Add feature'`)
-4. Push to branch (`git push origin feature/feature-name`)
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Team
+
+Built with ❤️ for the Google AI Hackathon

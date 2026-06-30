@@ -15,7 +15,8 @@ COPY backend/ .
 ENV PYTHONPATH=/app
 ENV GOOGLE_API_KEY=${GOOGLE_API_KEY}
 ENV FIREBASE_CREDENTIALS_PATH=${FIREBASE_CREDENTIALS_PATH}
+ENV FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,8 +1,7 @@
 from ultralytics import YOLO
 from PIL import Image
-import numpy as np
 from typing import List, Dict
-from utils.config import YOLO_MODEL_PATH
+from app.utils.config import YOLO_MODEL_PATH
 import os
 
 CIVIC_CATEGORIES = {
